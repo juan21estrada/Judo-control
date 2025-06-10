@@ -1,0 +1,347 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Fondos personalizados - Clase base común */
+.dashboard-background,
+.home-background,
+.users-background,
+.statistics-background,
+.competitors-background,
+.competitions-background,
+.combats-background {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Overlay común para todos los fondos */
+.dashboard-background::before,
+.home-background::before,
+.users-background::before,
+.statistics-background::before,
+.competitors-background::before,
+.competitions-background::before,
+.combats-background::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: -1;
+}
+
+/* Imágenes específicas para cada fondo */
+.dashboard-background {
+  background-image: url('./assets/images/silva-ijf-scaled.jpg');
+}
+
+.home-background {
+  background-image: url('./assets/images/R.jfif');
+}
+
+.users-background {
+  background-image: url('./assets/images/340571120_6329977050357957_4030065403673599047_n-e1681096999627.jpg');
+}
+
+.statistics-background {
+  background-image: url('./assets/images/arnaes_odelin.jpg');
+}
+
+.competitors-background {
+  background-image: url('./assets/images/IDALIS-01-RLH.x70014.jpg');
+}
+
+.competitions-background {
+  background-image: url('./assets/images/Judo-Cuba-andy-granda-tashkent.jpg');
+}
+
+.combats-background {
+  background-image: url('./assets/images/judo-cuba.jpg');
+}
+
+.content-container {
+  background: transparent;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+/* Estilos universales para tarjetas Material-UI - TRANSPARENTES */
+.MuiCard-root,
+.card-glass {
+  background: rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 20px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+}
+
+.MuiCard-root:hover,
+.card-glass:hover {
+  transform: translateY(-8px) !important;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15) !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Estilos de texto para tarjetas - TEXTO NEGRO */
+.MuiCard-root .MuiTypography-root,
+.MuiCard-root .MuiCardContent-root,
+.card-glass .MuiTypography-root,
+.card-glass .MuiCardContent-root {
+  color: #000000 !important;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8) !important;
+  font-weight: 600 !important;
+}
+
+/* Estilos para chips - TEXTO NEGRO */
+.MuiCard-root .MuiChip-root,
+.card-glass .MuiChip-root,
+.MuiChip-root {
+  background: rgba(255, 255, 255, 0.7) !important;
+  color: #000000 !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Botones dentro de tarjetas - COLORES DE JUDO */
+.MuiCard-root .MuiIconButton-root {
+  backdrop-filter: blur(10px) !important;
+  border-radius: 50% !important;
+  margin: 2px !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.3s ease !important;
+}
+
+.MuiCard-root .MuiIconButton-root:hover {
+  transform: scale(1.1) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Iconos específicos con colores de judo */
+.MuiCard-root .MuiIconButton-root:nth-child(1),
+.MuiCard-root .MuiSvgIcon-root[data-testid="EditIcon"] {
+  background: linear-gradient(45deg, #1976d2, #42a5f5) !important; /* Azul judo */
+  color: white !important;
+}
+
+.MuiCard-root .MuiIconButton-root:nth-child(2),
+.MuiCard-root .MuiSvgIcon-root[data-testid="DeleteIcon"] {
+  background: linear-gradient(45deg, #d32f2f, #f44336) !important; /* Rojo judo */
+  color: white !important;
+}
+
+.MuiCard-root .MuiIconButton-root:nth-child(3),
+.MuiCard-root .MuiSvgIcon-root[data-testid="VisibilityIcon"] {
+  background: linear-gradient(45deg, #388e3c, #4caf50) !important; /* Verde judo */
+  color: white !important;
+}
+
+.MuiCard-root .MuiIconButton-root:nth-child(4),
+.MuiCard-root .MuiSvgIcon-root[data-testid="PlayArrowIcon"] {
+  background: linear-gradient(45deg, #f57c00, #ff9800) !important; /* Naranja judo */
+  color: white !important;
+}
+
+/* Iconos adicionales con colores de cinturones de judo */
+.MuiCard-root .MuiIconButton-root:nth-child(5) {
+  background: linear-gradient(45deg, #795548, #8d6e63) !important; /* Marrón */
+  color: white !important;
+}
+
+.MuiCard-root .MuiIconButton-root:nth-child(6) {
+  background: linear-gradient(45deg, #424242, #616161) !important; /* Negro */
+  color: white !important;
+}
+
+.MuiCard-root .MuiButton-root {
+  background: rgba(25, 118, 210, 0.8) !important;
+  color: white !important;
+  backdrop-filter: blur(10px) !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+}
+
+.MuiCard-root .MuiButton-outlined {
+  background: rgba(255,255,255,0.3) !important;
+  color: #000000 !important;
+  border: 1px solid rgba(0,0,0,0.3) !important;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Cronómetro de combate */
+.combat-timer {
+  font-family: 'Courier New', monospace;
+  font-size: 3rem;
+  font-weight: bold;
+  text-align: center;
+  color: #1a237e;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+/* Botón moderno */
+.modern-button {
+  background: linear-gradient(45deg, #1976d2, #42a5f5) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 12px 24px !important;
+  color: white !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.3s ease !important;
+}
+
+.modern-button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Contenedores de formularios */
+.form-container {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+/* Navegación */
+.nav-glass {
+  background: rgba(25, 118, 210, 0.9) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+/* Alertas */
+.MuiAlert-root {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(10px) !important;
+  border-radius: 12px !important;
+  color: #000000 !important;
+}
+
+/* Avatar para mensajes - SIEMPRE VISIBLE */
+.message-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 15px;
+  border: 3px solid rgba(25, 118, 210, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+.message-container {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.message-content {
+  flex: 1;
+  color: #000000;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+/* Asegurar que todos los mensajes tengan avatar */
+.message-container:not(.message-avatar) {
+  padding-left: 65px;
+  position: relative;
+}
+
+.message-container:not(.message-avatar)::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: url('./assets/images/imgres.webp') center/cover;
+  border: 2px solid rgba(25, 118, 210, 0.8);
+}
+
+/* Títulos principales */
+h1, h2, h3, h4, h5, h6 {
+  color: white !important;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8) !important;
+  font-weight: 700 !important;
+}
+
+/* Botones generales */
+.MuiButton-root {
+  font-weight: 600 !important;
+}
+
+/* Inputs */
+.MuiTextField-root {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+}
+
+/* Iconos de Material-UI con colores de judo */
+.MuiSvgIcon-root {
+  color: #1976d2 !important;
+}
+
+/* Animaciones */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+  .combat-timer {
+    font-size: 2rem;
+    padding: 15px;
+  }
+  
+  .content-container {
+    padding: 16px;
+  }
+  
+  .message-avatar {
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
+  }
+}
