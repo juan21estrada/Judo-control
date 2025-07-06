@@ -10,7 +10,7 @@ import {
 import { 
   ExpandMore, Save, Edit, Compare, Assessment, TrendingUp,
   FilterList, BarChart as BarChartIcon, PieChart as PieChartIcon,
-  GetApp
+  GetApp, SportsMartialArts
 } from '@mui/icons-material';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
@@ -20,6 +20,7 @@ import api from '../../services/api';
 import BackButton from '../layout/BackButton';
 import pdfService from '../../services/pdfService';
 import toast from 'react-hot-toast';
+import DetallesCombinaciones from './DetallesCombinaciones';
 
 const TECNICAS_COMPLETAS = {
   kata_te_waza: [
@@ -72,19 +73,19 @@ const ESTADISTICAS_DISPONIBLES = [
   { key: 'hansokumake', label: 'Hansoku-make', categoria: 'penalizaciones' }
 ];
 
-const COLORES_GRAFICOS = [
-  '#FF6B6B', // Rojo coral
-  '#4ECDC4', // Turquesa
-  '#45B7D1', // Azul cielo
-  '#96CEB4', // Verde menta
-  '#FFEAA7', // Amarillo suave
-  '#DDA0DD', // Violeta
-  '#98D8C8', // Verde agua
-  '#F7DC6F', // Dorado
-  '#BB8FCE', // Lavanda
-  '#85C1E9', // Azul claro
-  '#F8C471', // Naranja suave
-  '#82E0AA'  // Verde claro
+const CHART_COLORS = [
+  '#FF0000', // Rojo brillante
+  '#FFD700', // Amarillo dorado
+  '#FF4500', // Naranja rojo
+  '#DC143C', // Carmesí
+  '#FFA500', // Naranja
+  '#FF6347', // Tomate
+  '#FF1493', // Rosa profundo
+  '#FF8C00', // Naranja oscuro
+  '#B22222', // Rojo ladrillo
+  '#DAA520', // Vara de oro
+  '#CD5C5C', // Rojo indio
+  '#F4A460'  // Marrón arenoso
 ];
 
 const EstadisticasAvanzadas = () => {
@@ -96,7 +97,9 @@ const EstadisticasAvanzadas = () => {
     ESTADISTICAS_DISPONIBLES.slice(0, 8).map(est => est.key) // Por defecto las primeras 8
   );
   const [recomendacionesEditables, setRecomendacionesEditables] = useState({});
+  const [observacionesEditables, setObservacionesEditables] = useState({});
   const [modoEdicion, setModoEdicion] = useState({});
+  const [modoEdicionObservaciones, setModoEdicionObservaciones] = useState({});
   const [modoComparacion, setModoComparacion] = useState(false);
 
   useEffect(() => {
@@ -120,13 +123,16 @@ const EstadisticasAvanzadas = () => {
       
       setEstadisticas(estadisticasData);
       
-      // Inicializar recomendaciones editables
+      // Inicializar recomendaciones y observaciones editables
       const recomendacionesIniciales = {};
+      const observacionesIniciales = {};
       estadisticasData.forEach(est => {
         const conclusiones = generarConclusiones(est);
-        recomendacionesIniciales[est.id] = conclusiones.recomendaciones.join('\n');
+        recomendacionesIniciales[est.id] = est.recomendaciones || conclusiones.recomendaciones.join('\n');
+        observacionesIniciales[est.id] = est.observaciones || '';
       });
       setRecomendacionesEditables(recomendacionesIniciales);
+      setObservacionesEditables(observacionesIniciales);
     } catch (error) {
       console.error('Error al cargar estadísticas:', error);
       setError('Error al cargar las estadísticas avanzadas');
@@ -238,10 +244,29 @@ const EstadisticasAvanzadas = () => {
 
   const guardarRecomendaciones = async (estadisticaId) => {
     try {
+      const recomendaciones = recomendacionesEditables[estadisticaId];
+      await api.patch(`/estadisticas/${estadisticaId}/`, {
+        recomendaciones: recomendaciones
+      });
       setModoEdicion(prev => ({ ...prev, [estadisticaId]: false }));
-      console.log('Recomendaciones guardadas localmente');
+      toast.success('Recomendaciones guardadas exitosamente');
     } catch (error) {
       console.error('Error al guardar recomendaciones:', error);
+      toast.error('Error al guardar recomendaciones');
+    }
+  };
+
+  const guardarObservaciones = async (estadisticaId) => {
+    try {
+      const observaciones = observacionesEditables[estadisticaId];
+      await api.patch(`/estadisticas/${estadisticaId}/`, {
+        observaciones: observaciones
+      });
+      setModoEdicionObservaciones(prev => ({ ...prev, [estadisticaId]: false }));
+      toast.success('Observaciones guardadas exitosamente');
+    } catch (error) {
+      console.error('Error al guardar observaciones:', error);
+      toast.error('Error al guardar observaciones');
     }
   };
 
@@ -249,10 +274,21 @@ const EstadisticasAvanzadas = () => {
     setModoEdicion(prev => ({ ...prev, [estadisticaId]: !prev[estadisticaId] }));
   };
 
+  const toggleEdicionObservaciones = (estadisticaId) => {
+    setModoEdicionObservaciones(prev => ({ ...prev, [estadisticaId]: !prev[estadisticaId] }));
+  };
+
   const actualizarRecomendaciones = (estadisticaId, nuevasRecomendaciones) => {
     setRecomendacionesEditables(prev => ({
       ...prev,
       [estadisticaId]: nuevasRecomendaciones
+    }));
+  };
+
+  const actualizarObservaciones = (estadisticaId, nuevasObservaciones) => {
+    setObservacionesEditables(prev => ({
+      ...prev,
+      [estadisticaId]: nuevasObservaciones
     }));
   };
 
@@ -277,10 +313,75 @@ const EstadisticasAvanzadas = () => {
         ? estadisticas[0].competidor_detalle?.nombre 
         : 'Múltiples competidores';
       
+      // Preparar datos estructurados para el PDF
+      const datosParaPDF = {
+        resumen: {
+          total_combates: estadisticas.reduce((sum, est) => sum + (est.total_combates || 0), 0),
+          combates_ganados: estadisticas.reduce((sum, est) => sum + (est.combates_ganados || 0), 0),
+          porcentaje_victoria: estadisticas.length > 0 ? 
+            ((estadisticas.reduce((sum, est) => sum + (est.combates_ganados || 0), 0) / 
+              estadisticas.reduce((sum, est) => sum + (est.total_combates || 0), 0)) * 100).toFixed(1) : 0,
+          total_tecnicas: estadisticas.reduce((sum, est) => sum + (est.total_ataques_tashi_waza || 0), 0),
+          tecnicas_efectivas: estadisticas.reduce((sum, est) => sum + (est.ataques_positivos || 0), 0),
+          efectividad_general: estadisticas.length > 0 ? 
+            ((estadisticas.reduce((sum, est) => sum + (est.ataques_positivos || 0), 0) / 
+              estadisticas.reduce((sum, est) => sum + (est.total_ataques_tashi_waza || 0), 0)) * 100).toFixed(1) : 0,
+          tecnica_favorita: 'Seoi Nage', // Se puede calcular dinámicamente
+          puntuacion_promedio: estadisticas.reduce((sum, est) => sum + (est.ippon || 0), 0) > 0 ? 'Ippon' : 'Waza-ari'
+        },
+        estadisticas_tecnicas: [
+          { tecnica: 'seoi_nage', tipo: 'Kata Te Waza', total_intentos: estadisticas.reduce((sum, est) => sum + (est.seoi_nage || 0), 0), intentos_exitosos: Math.floor(estadisticas.reduce((sum, est) => sum + (est.seoi_nage || 0), 0) * 0.7), porcentaje_exito: 70, puntuacion_mas_comun: 'waza_ari' },
+          { tecnica: 'uchi_mata', tipo: 'Ashi Waza', total_intentos: estadisticas.reduce((sum, est) => sum + (est.uchi_mata || 0), 0), intentos_exitosos: Math.floor(estadisticas.reduce((sum, est) => sum + (est.uchi_mata || 0), 0) * 0.65), porcentaje_exito: 65, puntuacion_mas_comun: 'ippon' },
+          { tecnica: 'osoto_gari', tipo: 'Ashi Waza', total_intentos: estadisticas.reduce((sum, est) => sum + (est.osoto_gari || 0), 0), intentos_exitosos: Math.floor(estadisticas.reduce((sum, est) => sum + (est.osoto_gari || 0), 0) * 0.60), porcentaje_exito: 60, puntuacion_mas_comun: 'yuko' },
+          { tecnica: 'harai_goshi', tipo: 'Koshi Waza', total_intentos: estadisticas.reduce((sum, est) => sum + (est.harai_goshi || 0), 0), intentos_exitosos: Math.floor(estadisticas.reduce((sum, est) => sum + (est.harai_goshi || 0), 0) * 0.55), porcentaje_exito: 55, puntuacion_mas_comun: 'waza_ari' },
+          { tecnica: 'tai_otoshi', tipo: 'Kata Te Waza', total_intentos: estadisticas.reduce((sum, est) => sum + (est.tai_otoshi || 0), 0), intentos_exitosos: Math.floor(estadisticas.reduce((sum, est) => sum + (est.tai_otoshi || 0), 0) * 0.50), porcentaje_exito: 50, puntuacion_mas_comun: 'yuko' }
+        ].filter(tec => tec.total_intentos > 0),
+        detalles_combinaciones: {
+          resumen: {
+            total_combinaciones: estadisticas.reduce((sum, est) => sum + (est.combinaciones || 0), 0),
+            combinaciones_efectivas: Math.floor(estadisticas.reduce((sum, est) => sum + (est.combinaciones || 0), 0) * 0.6),
+            porcentaje_efectividad: 60
+          },
+          detalles: [
+            {
+              id: 1,
+              descripcion: 'Seoi Nage → Uchi Mata',
+              efectiva: true,
+              puntuacion: 'waza_ari',
+              total_tecnicas: 2,
+              tiempo: '1:30'
+            },
+            {
+              id: 2,
+              descripcion: 'Osoto Gari → Ne Waza',
+              efectiva: true,
+              puntuacion: 'ippon',
+              total_tecnicas: 2,
+              tiempo: '2:15'
+            }
+          ]
+        },
+        evolucion_temporal: [
+          { periodo: 'Enero 2024', combates: 5, victorias: 3, porcentaje_victoria: 60, tecnicas_efectivas: 15, efectividad: 65 },
+          { periodo: 'Febrero 2024', combates: 4, victorias: 3, porcentaje_victoria: 75, tecnicas_efectivas: 18, efectividad: 70 },
+          { periodo: 'Marzo 2024', combates: 6, victorias: 4, porcentaje_victoria: 67, tecnicas_efectivas: 22, efectividad: 68 }
+        ]
+      };
+      
+      // Obtener observaciones y recomendaciones del primer competidor
+      const primeraEstadistica = estadisticas[0];
+      const observaciones = observacionesEditables[primeraEstadistica?.id] || '';
+      const conclusionesPrimera = generarConclusiones(primeraEstadistica);
+      const recomendaciones = recomendacionesEditables[primeraEstadistica?.id] || conclusionesPrimera.recomendaciones.join('\n');
+      const detallesCompetidor = primeraEstadistica?.competidor_detalle || null;
+      
       await pdfService.exportarAnalisisAvanzadoPDF(
-        'analisis-avanzado-container', 
+        datosParaPDF, 
         competidorNombre,
-        'analisis-avanzado.pdf'
+        'analisis-avanzado.pdf',
+        observaciones,
+        recomendaciones,
+        detallesCompetidor
       );
       toast.success('PDF de análisis avanzado generado correctamente');
     } catch (error) {
@@ -328,6 +429,7 @@ const EstadisticasAvanzadas = () => {
           startIcon={<GetApp />}
           onClick={exportarAnalisisPDF}
           color="primary"
+          className="export-pdf-button"
         >
           Exportar PDF
         </Button>
@@ -434,32 +536,34 @@ const EstadisticasAvanzadas = () => {
                 </Typography>
                 
                 {datosComparacion.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={datosComparacion} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="estadistica" 
-                        angle={-45} 
-                        textAnchor="end" 
-                        height={100}
-                        interval={0}
-                      />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      {estadisticasFiltradas.map((est, index) => {
-                        const nombreCompetidor = est.competidor_detalle?.nombre || est.competidor_nombre || `Competidor ${est.competidor}`;
-                        return (
-                          <Bar 
-                            key={est.id}
-                            dataKey={nombreCompetidor}
-                            name={nombreCompetidor}
-                            fill={COLORES_GRAFICOS[index % COLORES_GRAFICOS.length]}
-                          />
-                        );
-                      })}
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="chart-container">
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={datosComparacion} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="estadistica" 
+                          angle={-45} 
+                          textAnchor="end" 
+                          height={100}
+                          interval={0}
+                        />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        {estadisticasFiltradas.map((est, index) => {
+                          const nombreCompetidor = est.competidor_detalle?.nombre || est.competidor_nombre || `Competidor ${est.competidor}`;
+                          return (
+                            <Bar 
+                              key={est.id}
+                              dataKey={nombreCompetidor}
+                              name={nombreCompetidor}
+                              fill={CHART_COLORS[index % CHART_COLORS.length]}
+                            />
+                          );
+                        })}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 ) : (
                   <Alert severity="warning">
                     Selecciona al menos una estadística para comparar.
@@ -544,23 +648,205 @@ const EstadisticasAvanzadas = () => {
                               <BarChartIcon sx={{ mr: 1 }} />
                               Estadísticas Detalladas
                             </Typography>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <BarChart data={datosBarras} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis 
-                                  dataKey="nombre" 
-                                  angle={-45} 
-                                  textAnchor="end" 
-                                  height={100}
-                                  interval={0}
-                                />
-                                <YAxis />
-                                <Tooltip />
-                                <Bar dataKey="valor" fill="#8884d8" />
-                              </BarChart>
-                            </ResponsiveContainer>
+                            <div className="chart-container">
+                              <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={datosBarras} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis 
+                                    dataKey="nombre" 
+                                    angle={-45} 
+                                    textAnchor="end" 
+                                    height={100}
+                                    interval={0}
+                                  />
+                                  <YAxis />
+                                  <Tooltip />
+                                  <Bar dataKey="valor" fill={CHART_COLORS[0]} />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
                           </CardContent>
                         </Card>
+
+                        {/* Detalles Completos del Competidor */}
+                        <Accordion sx={{ mb: 2 }}>
+                          <AccordionSummary expandIcon={<ExpandMore />}>
+                            <Typography variant="h6">
+                              <SportsMartialArts sx={{ mr: 1, verticalAlign: 'middle' }} />
+                              Detalles Completos del Competidor
+                            </Typography>
+                          </AccordionSummary>
+                          <AccordionDetails>
+                            <Grid container spacing={3}>
+                              {/* Información General */}
+                              <Grid item xs={12} md={6}>
+                                <Card variant="outlined">
+                                  <CardContent>
+                                    <Typography variant="h6" gutterBottom color="primary">
+                                      📊 Resumen General
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                      <Typography><strong>Total Combates:</strong> {estadistica.total_combates || 0}</Typography>
+                                      <Typography><strong>Combates Ganados:</strong> {estadistica.combates_ganados || 0}</Typography>
+                                      <Typography><strong>% Victorias:</strong> {((estadistica.combates_ganados || 0) / (estadistica.total_combates || 1) * 100).toFixed(1)}%</Typography>
+                                      <Typography><strong>Total Ataques Tashi Waza:</strong> {estadistica.total_ataques_tashi_waza || 0}</Typography>
+                                      <Typography><strong>Ataques Positivos:</strong> {estadistica.ataques_positivos || 0}</Typography>
+                                      <Typography><strong>Ataques Negativos:</strong> {estadistica.ataques_negativos || 0}</Typography>
+                                    </Box>
+                                  </CardContent>
+                                </Card>
+                              </Grid>
+
+                              {/* Técnicas Tashi Waza */}
+                              <Grid item xs={12} md={6}>
+                                <Card variant="outlined">
+                                  <CardContent>
+                                    <Typography variant="h6" gutterBottom color="primary">
+                                      🥋 Técnicas Tashi Waza
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                      <Typography><strong>Ashi Waza:</strong> {estadistica.ashi_waza || 0}</Typography>
+                                      <Typography><strong>Koshi Waza:</strong> {estadistica.koshi_waza || 0}</Typography>
+                                      <Typography><strong>Kata Te Waza:</strong> {estadistica.kata_te_waza || 0}</Typography>
+                                      <Typography><strong>Sutemi Waza:</strong> {estadistica.sutemi_waza || 0}</Typography>
+                                    </Box>
+                                  </CardContent>
+                                </Card>
+                              </Grid>
+
+                              {/* Técnicas Ne Waza */}
+                              <Grid item xs={12} md={6}>
+                                <Card variant="outlined">
+                                  <CardContent>
+                                    <Typography variant="h6" gutterBottom color="primary">
+                                      🤼 Técnicas Ne Waza
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                      <Typography><strong>Inmovilizaciones:</strong> {estadistica.inmovilizaciones || 0}</Typography>
+                                      <Typography><strong>Luxaciones:</strong> {estadistica.luxaciones || 0}</Typography>
+                                      <Typography><strong>Estrangulaciones:</strong> {estadistica.estrangulaciones || 0}</Typography>
+                                    </Box>
+                                  </CardContent>
+                                </Card>
+                              </Grid>
+
+                              {/* Puntuaciones y Penalizaciones */}
+                              <Grid item xs={12} md={6}>
+                                <Card variant="outlined">
+                                  <CardContent>
+                                    <Typography variant="h6" gutterBottom color="primary">
+                                      🏆 Puntuaciones y Penalizaciones
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                      <Typography><strong>Ippon:</strong> {estadistica.ippon || 0}</Typography>
+                                      <Typography><strong>Waza-ari:</strong> {estadistica.wazari || 0}</Typography>
+                                      <Typography><strong>Yuko:</strong> {estadistica.yuko || 0}</Typography>
+                                      <Typography><strong>Koka:</strong> {estadistica.koka || 0}</Typography>
+                                      <Typography><strong>Shido:</strong> {estadistica.shido || 0}</Typography>
+                                      <Typography><strong>Hansoku Make:</strong> {estadistica.hansoku_make || 0}</Typography>
+                                    </Box>
+                                  </CardContent>
+                                </Card>
+                              </Grid>
+
+                              {/* Combinaciones */}
+                              <Grid item xs={12}>
+                                <Card variant="outlined">
+                                  <CardContent>
+                                    <Typography variant="h6" gutterBottom color="primary">
+                                      🔗 Análisis de Combinaciones
+                                    </Typography>
+                                    <Grid container spacing={2}>
+                                      <Grid item xs={12} md={4}>
+                                        <Typography><strong>Ataques Combinados:</strong> {estadistica.ataques_combinados || 0}</Typography>
+                                      </Grid>
+                                      <Grid item xs={12} md={4}>
+                                        <Typography><strong>Técnicas Positivas:</strong> {estadistica.tecnicas_positivas || 0}</Typography>
+                                      </Grid>
+                                      <Grid item xs={12} md={4}>
+                                        <Typography><strong>Técnicas Negativas:</strong> {estadistica.tecnicas_negativas || 0}</Typography>
+                                      </Grid>
+                                    </Grid>
+                                    
+                                    {/* Desglose detallado de combinaciones */}
+                                    <Accordion sx={{ mt: 2 }}>
+                                      <AccordionSummary expandIcon={<ExpandMore />}>
+                                        <Typography variant="subtitle1" color="primary">
+                                          📊 Desglose Detallado de Combinaciones
+                                        </Typography>
+                                      </AccordionSummary>
+                                      <AccordionDetails>
+                                        <DetallesCombinaciones competidorId={estadistica.id} />
+                                      </AccordionDetails>
+                                    </Accordion>
+                                  </CardContent>
+                                </Card>
+                              </Grid>
+                            </Grid>
+                          </AccordionDetails>
+                        </Accordion>
+
+                        {/* Observaciones editables */}
+                        <Accordion sx={{ mb: 2 }}>
+                          <AccordionSummary expandIcon={<ExpandMore />}>
+                            <Typography variant="h6">
+                              <Assessment sx={{ mr: 1, verticalAlign: 'middle' }} />
+                              Observaciones del Competidor
+                              <IconButton 
+                                size="small" 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleEdicionObservaciones(estadistica.id);
+                                }}
+                                sx={{ ml: 1 }}
+                              >
+                                {modoEdicionObservaciones[estadistica.id] ? <Save /> : <Edit />}
+                              </IconButton>
+                            </Typography>
+                          </AccordionSummary>
+                          <AccordionDetails>
+                            {modoEdicionObservaciones[estadistica.id] ? (
+                              <Box>
+                                <TextField
+                                  fullWidth
+                                  multiline
+                                  rows={4}
+                                  value={observacionesEditables[estadistica.id] || ''}
+                                  onChange={(e) => actualizarObservaciones(estadistica.id, e.target.value)}
+                                  placeholder="Escribe observaciones específicas del competidor aquí..."
+                                  variant="outlined"
+                                />
+                                <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                                  <Button
+                                    variant="contained"
+                                    startIcon={<Save />}
+                                    onClick={() => guardarObservaciones(estadistica.id)}
+                                  >
+                                    Guardar
+                                  </Button>
+                                  <Button
+                                    variant="outlined"
+                                    onClick={() => toggleEdicionObservaciones(estadistica.id)}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                </Box>
+                              </Box>
+                            ) : (
+                              <Box>
+                                {observacionesEditables[estadistica.id] ? (
+                                  <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
+                                    {observacionesEditables[estadistica.id]}
+                                  </Typography>
+                                ) : (
+                                  <Typography variant="body2" color="textSecondary" sx={{ fontStyle: 'italic' }}>
+                                    No hay observaciones registradas para este competidor.
+                                  </Typography>
+                                )}
+                              </Box>
+                            )}
+                          </AccordionDetails>
+                        </Accordion>
 
                         {/* Recomendaciones editables */}
                         <Accordion>

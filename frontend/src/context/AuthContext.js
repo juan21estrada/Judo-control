@@ -33,14 +33,38 @@ export const AuthContext = createContext();
 // ============================================================================
 
 /**
+ * Verifica si un token JWT ha expirado
+ * @param {string} token - Token a verificar
+ * @returns {boolean} True si el token ha expirado
+ */
+const isTokenExpired = (token) => {
+  if (!token) return true;
+  
+  try {
+    // Para tokens JWT, verificar expiración
+    if (token.includes('.')) {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.exp * 1000 < Date.now();
+    }
+    // Para tokens simples de Django, verificar si existe en localStorage
+    return false;
+  } catch {
+    return true;
+  }
+};
+
+/**
  * Configura el token de autorización en las cabeceras de la API
  * @param {string} token - Token de autenticación
  */
 const setAuthToken = (token) => {
-  if (token) {
+  if (token && !isTokenExpired(token)) {
     api.defaults.headers.Authorization = `Token ${token}`;
   } else {
     delete api.defaults.headers.Authorization;
+    if (token && isTokenExpired(token)) {
+      clearUserData();
+    }
   }
 };
 
@@ -140,8 +164,14 @@ export const AuthProvider = ({ children }) => {
         const storedData = getStoredUserData();
         
         if (storedData) {
-          setUser(storedData.user);
-          setAuthToken(storedData.token);
+          // Verificar si el token ha expirado
+          if (isTokenExpired(storedData.token)) {
+            clearUserData();
+            setUser(null);
+          } else {
+            setUser(storedData.user);
+            setAuthToken(storedData.token);
+          }
         }
       } catch (error) {
         console.error('Error al cargar usuario:', error);
@@ -153,6 +183,21 @@ export const AuthProvider = ({ children }) => {
     
     loadUser();
   }, []);
+
+  // Verificación periódica de expiración de tokens
+  useEffect(() => {
+    const checkTokenExpiration = () => {
+      const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+      if (token && isTokenExpired(token)) {
+        console.log('Token expirado, cerrando sesión automáticamente');
+        logout();
+      }
+    };
+    
+    // Verificar cada minuto
+    const interval = setInterval(checkTokenExpiration, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   // ========================================
   // FUNCIONES DE AUTENTICACIÓN

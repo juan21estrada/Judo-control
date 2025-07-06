@@ -28,6 +28,7 @@ const CompeticionForm = () => {
   const [formData, setFormData] = useState({
     nombre: '',
     fecha: new Date(),
+    fecha_fin: null,
     evento: '',
     tipo: '',
     cantidad_atletas: '',
@@ -46,6 +47,7 @@ const CompeticionForm = () => {
       setFormData({
         ...data,
         fecha: new Date(data.fecha),
+        fecha_fin: data.fecha_fin ? new Date(data.fecha_fin) : null,
       });
     } catch (err) {
       setError('Error al cargar los datos de la competición');
@@ -69,10 +71,17 @@ const CompeticionForm = () => {
     });
   };
 
-  const handleDateChange = (date) => {
+  const handleDateChange = (date, field = 'fecha') => {
     setFormData({
       ...formData,
-      fecha: date,
+      [field]: date,
+    });
+  };
+
+  const handleFechaFinChange = (date) => {
+    setFormData({
+      ...formData,
+      fecha_fin: date,
     });
   };
 
@@ -153,10 +162,19 @@ const CompeticionForm = () => {
 
                 <Grid item xs={12} md={6}>
                   <DatePicker
-                    label="Fecha"
+                    label="Fecha de inicio"
                     value={formData.fecha}
                     onChange={handleDateChange}
                     slotProps={{ textField: { fullWidth: true, required: true } }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <DatePicker
+                    label="Fecha de fin (opcional)"
+                    value={formData.fecha_fin}
+                    onChange={handleFechaFinChange}
+                    slotProps={{ textField: { fullWidth: true } }}
                   />
                 </Grid>
 

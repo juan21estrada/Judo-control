@@ -670,3 +670,49 @@ def calcular_puntuacion_ijf(acciones):
                 puntuacion['yuko'] += 1
     
     return puntuacion
+
+@api_view(['POST'])
+@permission_classes([EsEntrenador])
+def verificar_finalizacion_automatica(request, combate_id):
+    """
+    Verifica si el combate debe finalizar automáticamente según las reglas IJF
+    """
+    try:
+        combate = Combate.objects.get(id=combate_id)
+        
+        # Verificar si el combate ya está finalizado
+        if combate.finalizado:
+            return Response({
+                'ganador': combate.ganador.id if combate.ganador else None,
+                'motivo': 'combate_ya_finalizado',
+                'combate_finalizado': True
+            })
+        
+        # Verificar finalización automática
+        resultado = combate.verificar_finalizacion_automatica()
+        
+        if resultado:
+            return Response({
+                'ganador': resultado['ganador'],
+                'motivo': resultado['motivo'],
+                'combate_finalizado': True,
+                'puntuacion_ganador': resultado['puntuacion_ganador'],
+                'puntuacion_perdedor': resultado['puntuacion_perdedor']
+            })
+        else:
+            return Response({
+                'ganador': None,
+                'motivo': 'sin_finalizacion_automatica',
+                'combate_finalizado': False
+            })
+            
+    except Combate.DoesNotExist:
+        return Response(
+            {'error': 'Combate no encontrado'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

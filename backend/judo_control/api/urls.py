@@ -6,7 +6,7 @@ from competiciones.views import CompeticionViewSet
 from combates.views import (
     CombateViewSet, AccionTashiWazaViewSet, 
     AccionNeWazaViewSet, AmonestacionViewSet,
-    obtener_puntuaciones_combate  # Add this import
+    obtener_puntuaciones_combate, verificar_finalizacion_automatica
 )
 from estadisticas.views import ReporteViewSet, EstadisticaCompetidorViewSet, estadisticas_detalladas_competidor
 from rest_framework.authtoken.views import obtain_auth_token
@@ -30,4 +30,5 @@ urlpatterns = [
     path('competidor/<int:competidor_id>/', estadisticas_detalladas_competidor, name='estadisticas-competidor'),
     # Cambiar a:
     path('combates/<int:combate_id>/puntuaciones/', obtener_puntuaciones_combate, name='obtener_puntuaciones_combate'),  # Remove 'views.' prefix
+    path('combates/<int:combate_id>/verificar_finalizacion_automatica/', verificar_finalizacion_automatica, name='verificar_finalizacion_automatica'),
 ]

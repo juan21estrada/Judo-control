@@ -11,8 +11,9 @@ class EstadisticaCompetidorSerializer(serializers.ModelSerializer):
                   'combates_ganados', 'combates_perdidos', 'total_ataques_tashi_waza', 
                   'ataques_positivos', 'ataques_negativos', 'wazari', 'yuko', 'ippon', 
                   'ashi_waza', 'koshi_waza', 'kata_te_waza', 'sutemi_waza', 'combinaciones', 
+                  'ataques_combinados', 'tecnicas_positivas_combinadas', 'tecnicas_negativas_combinadas',
                   'total_acciones_ne_waza', 'inmovilizaciones', 'luxaciones', 
-                  'estrangulaciones', 'shido', 'hansokumake']
+                  'estrangulaciones', 'shido', 'hansokumake', 'observaciones', 'recomendaciones']
 
 class ReporteSerializer(serializers.ModelSerializer):
     estadisticas = EstadisticaCompetidorSerializer(many=True, read_only=True)

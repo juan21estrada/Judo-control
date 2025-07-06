@@ -56,26 +56,6 @@ class ReporteViewSet(viewsets.ModelViewSet):
             total_combates = combates_query.count()
             combates_ganados = combates_query.filter(ganador=competidor).count()
             
-            # Acciones Tashi Waza
-            acciones_tashi = AccionTashiWaza.objects.filter(
-                competidor=competidor,
-                combate__in=combates_query
-            )
-            
-            total_ataques_tashi = acciones_tashi.count()
-            ataques_positivos = acciones_tashi.exclude(puntuacion='sin_puntuacion').count()
-            ataques_negativos = acciones_tashi.filter(puntuacion='sin_puntuacion').count()
-            
-            wazari = acciones_tashi.filter(puntuacion='waza_ari').count()
-            ippon = acciones_tashi.filter(puntuacion='ippon').count()
-            
-            ashi_waza = acciones_tashi.filter(tipo='ashi_waza').count()
-            koshi_waza = acciones_tashi.filter(tipo='koshi_waza').count()
-            kata_te_waza = acciones_tashi.filter(tipo='te_waza').count()
-            sutemi_waza = acciones_tashi.filter(Q(tipo='ma_sutemi_waza') | Q(tipo='yoko_sutemi_waza')).count()
-            
-            combinaciones_tashi = acciones_tashi.filter(accion_combinada__isnull=False).count()
-            
             # NUEVAS ESTADÍSTICAS DE ATAQUES COMBINADOS
             acciones_combinadas = AccionCombinada.objects.filter(
                 competidor=competidor,
@@ -88,24 +68,52 @@ class ReporteViewSet(viewsets.ModelViewSet):
             acciones_combinadas_ippon = acciones_combinadas.filter(puntuacion='ippon').count()
             acciones_combinadas_waza_ari = acciones_combinadas.filter(puntuacion='waza_ari').count()
             
-            # MODIFICAR: Incluir puntuaciones de acciones combinadas en los totales
-            ippon_total = ippon + acciones_combinadas_ippon
-            waza_ari_total = wazari + acciones_combinadas_waza_ari
-            
             # Técnicas positivas y negativas en combinaciones
+            # CORREGIDO: Contar las AccionCombinada directamente según su efectividad
             tecnicas_positivas_combinadas = 0
             tecnicas_negativas_combinadas = 0
             
             for accion_combinada in acciones_combinadas:
-                # Contar técnicas Tashi Waza en esta combinación
+                # Contar técnicas Tashi Waza en esta combinación (si existen)
                 tashi_en_combinacion = AccionTashiWaza.objects.filter(accion_combinada=accion_combinada)
                 tecnicas_positivas_combinadas += tashi_en_combinacion.exclude(puntuacion='sin_puntuacion').count()
                 tecnicas_negativas_combinadas += tashi_en_combinacion.filter(puntuacion='sin_puntuacion').count()
                 
-                # Contar técnicas Ne Waza en esta combinación
+                # Contar técnicas Ne Waza en esta combinación (si existen)
                 ne_en_combinacion = AccionNeWaza.objects.filter(accion_combinada=accion_combinada)
                 tecnicas_positivas_combinadas += ne_en_combinacion.filter(efectiva=True).count()
                 tecnicas_negativas_combinadas += ne_en_combinacion.filter(efectiva=False).count()
+                
+                # NUEVO: Si no hay técnicas individuales relacionadas, contar la AccionCombinada directamente
+                if tashi_en_combinacion.count() == 0 and ne_en_combinacion.count() == 0:
+                    if accion_combinada.efectiva or accion_combinada.puntuacion != 'sin_puntuacion':
+                        tecnicas_positivas_combinadas += 1
+                    else:
+                        tecnicas_negativas_combinadas += 1
+            
+            # Acciones Tashi Waza
+            acciones_tashi = AccionTashiWaza.objects.filter(
+                competidor=competidor,
+                combate__in=combates_query
+            )
+            
+            total_ataques_tashi = acciones_tashi.count()
+            ataques_positivos = acciones_tashi.exclude(puntuacion='sin_puntuacion').count() + tecnicas_positivas_combinadas
+            ataques_negativos = acciones_tashi.filter(puntuacion='sin_puntuacion').count() + tecnicas_negativas_combinadas
+            
+            wazari = acciones_tashi.filter(puntuacion='waza_ari').count()
+            ippon = acciones_tashi.filter(puntuacion='ippon').count()
+            
+            ashi_waza = acciones_tashi.filter(tipo='ashi_waza').count()
+            koshi_waza = acciones_tashi.filter(tipo='koshi_waza').count()
+            kata_te_waza = acciones_tashi.filter(tipo='te_waza').count()
+            sutemi_waza = acciones_tashi.filter(Q(tipo='ma_sutemi_waza') | Q(tipo='yoko_sutemi_waza')).count()
+            
+            combinaciones_tashi = acciones_tashi.filter(accion_combinada__isnull=False).count()
+            
+            # MODIFICAR: Incluir puntuaciones de acciones combinadas en los totales
+            ippon_total = ippon + acciones_combinadas_ippon
+            waza_ari_total = wazari + acciones_combinadas_waza_ari
             
             # Acciones Ne Waza
             acciones_ne = AccionNeWaza.objects.filter(
@@ -161,7 +169,7 @@ class ReporteViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(reporte)
         return Response(serializer.data)
 
-class EstadisticaCompetidorViewSet(viewsets.ReadOnlyModelViewSet):
+class EstadisticaCompetidorViewSet(viewsets.ModelViewSet):
     queryset = EstadisticaCompetidor.objects.all()
     serializer_class = EstadisticaCompetidorSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -170,7 +178,7 @@ class EstadisticaCompetidorViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = super().get_queryset()
         
         # Si el usuario es un competidor, solo puede ver sus propias estadísticas
-        if self.request.user.rol == 'competidor':
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'rol') and self.request.user.rol == 'competidor':
             try:
                 competidor = Competidor.objects.get(usuario=self.request.user)
                 queryset = queryset.filter(competidor=competidor)
@@ -191,6 +199,163 @@ class EstadisticaCompetidorViewSet(viewsets.ReadOnlyModelViewSet):
                 }, status=200)
         
         return super().list(request, *args, **kwargs)
+    
+    def get_permissions(self):
+        """Configurar permisos según la acción"""
+        if self.action in ['create', 'destroy']:
+            self.permission_classes = [permissions.IsAdminUser]
+        elif self.action in ['update', 'partial_update']:
+            # Solo entrenadores y administradores pueden editar observaciones y recomendaciones
+            self.permission_classes = [EsEntrenador]
+        elif self.action == 'detalles_combinaciones':
+            self.permission_classes = [permissions.IsAuthenticated]
+        return super().get_permissions()
+    
+    def update(self, request, *args, **kwargs):
+        """Solo permitir actualización de observaciones y recomendaciones"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        # Solo permitir actualizar observaciones y recomendaciones
+        allowed_fields = ['observaciones', 'recomendaciones']
+        filtered_data = {k: v for k, v in request.data.items() if k in allowed_fields}
+        
+        serializer = self.get_serializer(instance, data=filtered_data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        return Response(serializer.data)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """Permitir actualización parcial"""
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+    
+    @action(detail=True, methods=['get'])
+    def detalles_combinaciones(self, request, pk=None):
+        """Obtener detalles específicos de las acciones combinadas de un competidor"""
+        estadistica = self.get_object()
+        competidor = estadistica.competidor
+        
+        # Obtener todas las acciones combinadas del competidor
+        acciones_combinadas = AccionCombinada.objects.filter(
+            competidor=competidor
+        ).select_related('combate', 'registrado_por')
+        
+        detalles_combinaciones = []
+        
+        for accion_combinada in acciones_combinadas:
+            # Obtener técnicas Tashi Waza relacionadas
+            tashi_relacionadas = AccionTashiWaza.objects.filter(
+                accion_combinada=accion_combinada
+            ).values('tecnica', 'efectiva', 'puntuacion')
+            
+            # Obtener técnicas Ne Waza relacionadas
+            ne_relacionadas = AccionNeWaza.objects.filter(
+                accion_combinada=accion_combinada
+            ).values('tecnica', 'efectiva', 'puntuacion')
+            
+            # Clasificar técnicas por efectividad
+            tecnicas_efectivas = []
+            tecnicas_no_efectivas = []
+            
+            # Procesar técnicas Tashi Waza
+            for tecnica in tashi_relacionadas:
+                tecnica_info = {
+                    'tipo': 'Tashi Waza',
+                    'tecnica': tecnica['tecnica'],
+                    'puntuacion': tecnica['puntuacion']
+                }
+                if tecnica['puntuacion'] != 'sin_puntuacion':
+                    tecnicas_efectivas.append(tecnica_info)
+                else:
+                    tecnicas_no_efectivas.append(tecnica_info)
+            
+            # Procesar técnicas Ne Waza
+            for tecnica in ne_relacionadas:
+                tecnica_info = {
+                    'tipo': 'Ne Waza',
+                    'tecnica': tecnica['tecnica'],
+                    'puntuacion': tecnica['puntuacion']
+                }
+                if tecnica['efectiva']:
+                    tecnicas_efectivas.append(tecnica_info)
+                else:
+                    tecnicas_no_efectivas.append(tecnica_info)
+            
+            # Si no hay técnicas individuales, considerar la acción combinada directamente
+            if not tashi_relacionadas and not ne_relacionadas:
+                if accion_combinada.efectiva or accion_combinada.puntuacion != 'sin_puntuacion':
+                    tecnicas_efectivas.append({
+                        'tipo': 'Combinación Directa',
+                        'tecnica': accion_combinada.descripcion,
+                        'puntuacion': accion_combinada.puntuacion
+                    })
+                else:
+                    tecnicas_no_efectivas.append({
+                        'tipo': 'Combinación Directa',
+                        'tecnica': accion_combinada.descripcion,
+                        'puntuacion': accion_combinada.puntuacion
+                    })
+            
+            detalles_combinaciones.append({
+                'id': accion_combinada.id,
+                'descripcion': accion_combinada.descripcion,
+                'descripcion_detallada': accion_combinada.descripcion_detallada,
+                'efectiva': accion_combinada.efectiva,
+                'puntuacion': accion_combinada.puntuacion,
+                'tiempo': str(accion_combinada.tiempo),
+                'combate_id': accion_combinada.combate.id,
+                'tecnicas_efectivas': tecnicas_efectivas,
+                'tecnicas_no_efectivas': tecnicas_no_efectivas,
+                'total_tecnicas': len(tecnicas_efectivas) + len(tecnicas_no_efectivas)
+            })
+        
+        # Resumen estadístico
+        total_combinaciones = len(detalles_combinaciones)
+        combinaciones_efectivas = sum(1 for c in detalles_combinaciones if c['efectiva'])
+        combinaciones_no_efectivas = total_combinaciones - combinaciones_efectivas
+        
+        # Contar tipos de técnicas en combinaciones
+        total_tecnicas_tashi = sum(len([t for t in c['tecnicas_efectivas'] + c['tecnicas_no_efectivas'] if t['tipo'] == 'Tashi Waza']) for c in detalles_combinaciones)
+        total_tecnicas_ne = sum(len([t for t in c['tecnicas_efectivas'] + c['tecnicas_no_efectivas'] if t['tipo'] == 'Ne Waza']) for c in detalles_combinaciones)
+        total_combinaciones_directas = sum(len([t for t in c['tecnicas_efectivas'] + c['tecnicas_no_efectivas'] if t['tipo'] == 'Combinación Directa']) for c in detalles_combinaciones)
+        
+        # Técnicas efectivas vs no efectivas por tipo
+        tecnicas_tashi_efectivas = sum(len([t for t in c['tecnicas_efectivas'] if t['tipo'] == 'Tashi Waza']) for c in detalles_combinaciones)
+        tecnicas_ne_efectivas = sum(len([t for t in c['tecnicas_efectivas'] if t['tipo'] == 'Ne Waza']) for c in detalles_combinaciones)
+        combinaciones_directas_efectivas = sum(len([t for t in c['tecnicas_efectivas'] if t['tipo'] == 'Combinación Directa']) for c in detalles_combinaciones)
+        
+        tecnicas_tashi_no_efectivas = sum(len([t for t in c['tecnicas_no_efectivas'] if t['tipo'] == 'Tashi Waza']) for c in detalles_combinaciones)
+        tecnicas_ne_no_efectivas = sum(len([t for t in c['tecnicas_no_efectivas'] if t['tipo'] == 'Ne Waza']) for c in detalles_combinaciones)
+        combinaciones_directas_no_efectivas = sum(len([t for t in c['tecnicas_no_efectivas'] if t['tipo'] == 'Combinación Directa']) for c in detalles_combinaciones)
+        
+        return Response({
+            'resumen': {
+                'total_combinaciones': total_combinaciones,
+                'combinaciones_efectivas': combinaciones_efectivas,
+                'combinaciones_no_efectivas': combinaciones_no_efectivas,
+                'porcentaje_efectividad': round((combinaciones_efectivas / total_combinaciones * 100) if total_combinaciones > 0 else 0, 1),
+                'tipos_tecnicas': {
+                    'tashi_waza': {
+                        'total': total_tecnicas_tashi,
+                        'efectivas': tecnicas_tashi_efectivas,
+                        'no_efectivas': tecnicas_tashi_no_efectivas
+                    },
+                    'ne_waza': {
+                        'total': total_tecnicas_ne,
+                        'efectivas': tecnicas_ne_efectivas,
+                        'no_efectivas': tecnicas_ne_no_efectivas
+                    },
+                    'combinaciones_directas': {
+                        'total': total_combinaciones_directas,
+                        'efectivas': combinaciones_directas_efectivas,
+                        'no_efectivas': combinaciones_directas_no_efectivas
+                    }
+                }
+            },
+            'detalles': detalles_combinaciones
+        })
     
     @action(detail=False, methods=['get'])
     def generales(self, request):
@@ -345,10 +510,33 @@ def estadisticas_detalladas_competidor(request, competidor_id):
             combate__in=combates
         )
         
+        # Calcular técnicas en combinaciones
+        # CORREGIDO: Contar las AccionCombinada directamente según su efectividad
+        tecnicas_positivas_combinadas = 0
+        tecnicas_negativas_combinadas = 0
+        
+        for accion_combinada in AccionCombinada.objects.filter(competidor=competidor, combate__in=combates):
+            # Contar técnicas Tashi Waza en esta combinación (si existen)
+            tashi_en_combinacion = AccionTashiWaza.objects.filter(accion_combinada=accion_combinada)
+            tecnicas_positivas_combinadas += tashi_en_combinacion.exclude(puntuacion='sin_puntuacion').count()
+            tecnicas_negativas_combinadas += tashi_en_combinacion.filter(puntuacion='sin_puntuacion').count()
+            
+            # Contar técnicas Ne Waza en esta combinación (si existen)
+            ne_en_combinacion = AccionNeWaza.objects.filter(accion_combinada=accion_combinada)
+            tecnicas_positivas_combinadas += ne_en_combinacion.filter(efectiva=True).count()
+            tecnicas_negativas_combinadas += ne_en_combinacion.filter(efectiva=False).count()
+            
+            # NUEVO: Si no hay técnicas individuales relacionadas, contar la AccionCombinada directamente
+            if tashi_en_combinacion.count() == 0 and ne_en_combinacion.count() == 0:
+                if accion_combinada.efectiva or accion_combinada.puntuacion != 'sin_puntuacion':
+                    tecnicas_positivas_combinadas += 1
+                else:
+                    tecnicas_negativas_combinadas += 1
+        
         # Acciones Tashi Waza - CAMPOS CORREGIDOS
         total_ataques_tashi = acciones_tashi.count()
-        ataques_positivos = acciones_tashi.exclude(puntuacion='sin_puntuacion').count()
-        ataques_negativos = acciones_tashi.filter(puntuacion='sin_puntuacion').count()
+        ataques_positivos = acciones_tashi.exclude(puntuacion='sin_puntuacion').count() + tecnicas_positivas_combinadas
+        ataques_negativos = acciones_tashi.filter(puntuacion='sin_puntuacion').count() + tecnicas_negativas_combinadas
         
         wazari = acciones_tashi.filter(puntuacion='waza_ari').count()
         ippon = acciones_tashi.filter(puntuacion='ippon').count()

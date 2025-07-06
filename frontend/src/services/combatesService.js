@@ -105,8 +105,11 @@ const combatesService = {
     return response.data;
   },
   
-  // Remove this duplicate finalizarCombate function (lines 75-78)
-  // Keep only the one at lines 39-42
+  // Verificar finalización automática
+  verificarFinalizacionAutomatica: async (combateId) => {
+    const response = await api.post(`/combates/${combateId}/verificar_finalizacion_automatica/`);
+    return response.data;
+  }
 };
 
 export default combatesService;

@@ -27,10 +27,45 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 404) {
-      console.error('Recurso no encontrado:', error.config.url);
-      toast.error('Recurso no encontrado. Verifique la URL.');
+    const { status } = error.response || {};
+    
+    switch (status) {
+      case 401:
+        // Token inválido o expirado
+        console.log('Error 401: Token inválido o expirado');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        toast.error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+        // Redirigir al login solo si no estamos ya en login
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+        break;
+        
+      case 403:
+        console.log('Error 403: Acceso denegado');
+        toast.error('No tienes permisos para realizar esta acción.');
+        break;
+        
+      case 404:
+        console.error('Recurso no encontrado:', error.config?.url);
+        toast.error('Recurso no encontrado. Verifique la URL.');
+        break;
+        
+      case 500:
+        console.error('Error interno del servidor:', error);
+        toast.error('Error interno del servidor. Intente nuevamente.');
+        break;
+        
+      default:
+        if (error.response?.data?.error) {
+          toast.error(error.response.data.error);
+        } else if (error.response?.data?.message) {
+          toast.error(error.response.data.message);
+        }
+        break;
     }
+    
     return Promise.reject(error);
   }
 );

@@ -34,6 +34,7 @@ const THEME_COLORS = {
 };
 
 const INITIAL_FORM_DATA = {
+  identificacion_personal: '',
   nombre: '',
   genero: '',
   division_peso: '',
@@ -88,6 +89,14 @@ const VALIDATION_RULES = {
 
 const validateForm = (formData) => {
   const errors = [];
+  
+  if (!formData.identificacion_personal?.trim()) {
+    errors.push('La identificación personal es obligatoria');
+  } else if (formData.identificacion_personal.length !== 11) {
+    errors.push('La identificación personal debe tener 11 dígitos');
+  } else if (!/^\d{11}$/.test(formData.identificacion_personal)) {
+    errors.push('La identificación personal solo debe contener números');
+  }
   
   if (!formData.nombre?.trim()) {
     errors.push('El nombre es obligatorio');
@@ -296,6 +305,20 @@ const CompetidorForm = () => {
         <Typography variant="h6" sx={{ fontWeight: 'bold', color: THEME_COLORS.primary, mb: 1 }}>
           👤 Información Personal
         </Typography>
+      </Grid>
+      
+      <Grid item xs={12} md={6}>
+        <TextField
+          fullWidth
+          label="Identificación Personal (CI)"
+          name="identificacion_personal"
+          value={formData.identificacion_personal}
+          onChange={handleChange}
+          required
+          inputProps={{ maxLength: 11 }}
+          placeholder="Ingrese el carnet de identidad (11 dígitos)"
+          helperText="Carnet de identidad de 11 dígitos"
+        />
       </Grid>
       
       <Grid item xs={12} md={6}>

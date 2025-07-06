@@ -16,6 +16,8 @@ import {
   DialogContent,
   DialogActions,
   Container,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import { Add, Edit, Delete, EmojiEvents, PlayArrow, PersonAdd } from '@mui/icons-material';
 import toast from 'react-hot-toast';
@@ -34,6 +36,16 @@ const THEME_COLORS = {
   error: 'error',
   secondary: 'secondary',
   default: 'default',
+};
+
+const COMPETITION_STATUS = {
+  ACTIVE: 'activas',
+  FINISHED: 'finalizadas'
+};
+
+const ALERT_MESSAGES = {
+  NO_ACTIVE_COMPETITIONS: 'No hay competiciones activas.',
+  NO_FINISHED_COMPETITIONS: 'No hay competiciones finalizadas.',
 };
 
 const INITIAL_DELETE_DIALOG_STATE = {
@@ -68,12 +80,14 @@ const getTipoLabel = (tipo) => {
 
 
 const CompeticionesList = () => {
- 
-  
+  // Estados principales
   const [competiciones, setCompeticiones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteDialog, setDeleteDialog] = useState(INITIAL_DELETE_DIALOG_STATE);
+  
+  // Estados de filtros
+  const [competicionStatus, setCompeticionStatus] = useState(COMPETITION_STATUS.ACTIVE);
   
  
   
@@ -81,7 +95,7 @@ const CompeticionesList = () => {
   
   useEffect(() => {
     fetchCompeticiones();
-  }, []);
+  }, [competicionStatus]);
   
  
   
@@ -90,7 +104,12 @@ const CompeticionesList = () => {
       setLoading(true);
       setError('');
       
-      const response = await api.get('competiciones/');
+      const finalizada = competicionStatus === COMPETITION_STATUS.FINISHED;
+      const params = new URLSearchParams({
+        finalizada: finalizada.toString()
+      });
+      
+      const response = await api.get(`competiciones/?${params.toString()}`);
       const data = response.data.results || response.data;
       
       setCompeticiones(Array.isArray(data) ? data : []);
@@ -112,6 +131,18 @@ const CompeticionesList = () => {
   
   const handleDeleteCancel = () => {
     setDeleteDialog(INITIAL_DELETE_DIALOG_STATE);
+  };
+  
+  const handleStatusChange = (event, newStatus) => {
+    if (newStatus !== null) {
+      setCompeticionStatus(newStatus);
+    }
+  };
+  
+  const getEmptyMessage = () => {
+    return competicionStatus === COMPETITION_STATUS.ACTIVE 
+      ? ALERT_MESSAGES.NO_ACTIVE_COMPETITIONS
+      : ALERT_MESSAGES.NO_FINISHED_COMPETITIONS;
   };
   
   const handleDeleteConfirm = async () => {
@@ -163,6 +194,50 @@ const CompeticionesList = () => {
         </Button>
       )}
     </Box>
+  );
+  
+  const renderFilters = () => (
+    <Box mb={3}>
+      <Typography variant="h6" gutterBottom>
+        Estado de Competiciones
+      </Typography>
+      <ToggleButtonGroup
+        value={competicionStatus}
+        exclusive
+        onChange={handleStatusChange}
+        aria-label="estado competiciones"
+        sx={{
+          '& .MuiToggleButton-root': {
+            backgroundColor: '#1976d2',
+            color: 'white',
+            border: '1px solid #1976d2',
+            '&:hover': {
+              backgroundColor: '#1565c0',
+            },
+            '&.Mui-selected': {
+              backgroundColor: '#0d47a1',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: '#0d47a1',
+              },
+            },
+          },
+        }}
+      >
+        <ToggleButton value={COMPETITION_STATUS.ACTIVE} aria-label="activas">
+          Competiciones Activas
+        </ToggleButton>
+        <ToggleButton value={COMPETITION_STATUS.FINISHED} aria-label="finalizadas">
+          Competiciones Finalizadas
+        </ToggleButton>
+      </ToggleButtonGroup>
+    </Box>
+  );
+  
+  const renderStatusInfo = () => (
+    <Alert severity="info" sx={{ mb: 2 }}>
+      Mostrando competiciones {competicionStatus === COMPETITION_STATUS.ACTIVE ? 'activas' : 'finalizadas'}
+    </Alert>
   );
   
   const renderCompeticionInfo = (competicion) => (
@@ -365,6 +440,12 @@ const CompeticionesList = () => {
         {/* Header */}
         {renderHeader()}
         
+        {/* Filters */}
+        {renderFilters()}
+        
+        {/* Status Info */}
+        {renderStatusInfo()}
+        
         {/* Error Alert */}
         {error && (
           <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
@@ -374,7 +455,9 @@ const CompeticionesList = () => {
         
         {/* Content */}
         {competiciones.length === 0 ? (
-          renderEmptyState()
+          <Alert severity="info" sx={{ textAlign: 'center', py: 4 }}>
+            {getEmptyMessage()}
+          </Alert>
         ) : (
           <Grid container spacing={3}>
             {competiciones.map(renderCompeticionCard)}

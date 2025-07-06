@@ -279,7 +279,7 @@ const ReporteForm = () => {
   );
 
   const renderMultiSelect = (label, field, options, required = false, renderOption) => (
-    <FormControl fullWidth required={required}>
+    <FormControl fullWidth required={required} className="report-selector">
       <InputLabel>{label}</InputLabel>
       <Select
         multiple

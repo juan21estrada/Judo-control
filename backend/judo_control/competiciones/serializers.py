@@ -8,7 +8,7 @@ class CompeticionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Competicion
-        fields = ['id', 'nombre', 'fecha', 'evento', 'tipo', 'cantidad_atletas', 
-                  'cantidad_combates_planificados', 'cantidad_combates_realizados', 
-                  'finalizada', 'creado_por', 'creado_por_nombre', 'fecha_creacion', 'competidores']
+        fields = ['id', 'nombre', 'fecha', 'fecha_fin', 'evento', 'tipo', 'cantidad_atletas', 
+                 'cantidad_combates_planificados', 'cantidad_combates_realizados', 
+                 'finalizada', 'creado_por', 'creado_por_nombre', 'fecha_creacion', 'competidores']
         read_only_fields = ['fecha_creacion', 'cantidad_combates_realizados', 'creado_por', 'creado_por_nombre']

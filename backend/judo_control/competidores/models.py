@@ -36,6 +36,12 @@ class Competidor(models.Model):
     )
     
     usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, null=True, blank=True)
+    identificacion_personal = models.CharField(
+        'Identificación Personal (CI)', 
+        max_length=11, 
+        unique=True,
+        help_text='Carnet de identidad del competidor'
+    )
     nombre = models.CharField('Nombre completo', max_length=100)
     genero = models.CharField('Género', max_length=1, choices=GENERO_CHOICES)
     division_peso = models.CharField('División de peso', max_length=10)
@@ -44,6 +50,7 @@ class Competidor(models.Model):
         'Años de experiencia',
         validators=[MinValueValidator(0), MaxValueValidator(5)]
     )
+    activo = models.BooleanField('Activo', default=True, help_text='Indica si el competidor está activo en el sistema')
     fecha_registro = models.DateTimeField('Fecha de registro', auto_now_add=True)
     
     def __str__(self):

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { TextField, Button, Typography, Paper, Box, Alert, MenuItem } from '@mui/material';
+import { TextField, Button, Typography, Paper, Box, Alert } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
 
 const Register = () => {
@@ -66,7 +66,7 @@ const Register = () => {
     >
       <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
         <Typography component="h1" variant="h5" align="center" gutterBottom>
-          Registro de Usuario
+          Registro de Competidor
         </Typography>
         
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -119,22 +119,11 @@ const Register = () => {
             value={formData.password2}
             onChange={handleChange}
           />
-          <TextField
-            select
-            margin="normal"
-            required
-            fullWidth
-            name="rol"
-            label="Rol"
-            id="rol"
-            value={formData.rol}
-            onChange={handleChange}
-          >
-            <MenuItem value="competidor">Competidor</MenuItem>
-            <MenuItem value="entrenador">Entrenador</MenuItem>
-          </TextField>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-            Nota: Los roles de entrenador deben ser aprobados por un administrador.
+          <Typography variant="body2" color="primary" sx={{ mt: 2, mb: 1, textAlign: 'center' }}>
+            Registro exclusivo para competidores
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2, textAlign: 'center' }}>
+            Para otros tipos de acceso, contacte al administrador del sistema.
           </Typography>
           <Button
             type="submit"
@@ -143,7 +132,7 @@ const Register = () => {
             sx={{ mt: 3, mb: 2, bgcolor: '#1a237e' }}
             disabled={loading}
           >
-            {loading ? 'Registrando...' : 'Registrarse'}
+            {loading ? 'Registrando...' : 'Registrarse como Competidor'}
           </Button>
           <Box sx={{ textAlign: 'center', mt: 2 }}>
             <Typography variant="body2">

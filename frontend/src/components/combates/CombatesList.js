@@ -233,7 +233,7 @@ const CombatesList = () => {
         <Typography variant="h6" gutterBottom>
           Seleccionar Competición
         </Typography>
-        <FormControl fullWidth sx={{ maxWidth: 400 }}>
+        <FormControl fullWidth sx={{ maxWidth: 400 }} className="competition-filter">
           <InputLabel>Competición</InputLabel>
           <Select
             value={selectedCompeticion}
@@ -263,6 +263,23 @@ const CombatesList = () => {
             exclusive
             onChange={handleStatusChange}
             aria-label="estado combates"
+            sx={{
+              '& .MuiToggleButton-root': {
+                backgroundColor: '#1976d2',
+                color: 'white',
+                border: '1px solid #1976d2',
+                '&:hover': {
+                  backgroundColor: '#1565c0',
+                },
+                '&.Mui-selected': {
+                  backgroundColor: '#0d47a1',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#0d47a1',
+                  },
+                },
+              },
+            }}
           >
             <ToggleButton value={COMBAT_STATUS.ACTIVE} aria-label="activos">
               Combates Activos

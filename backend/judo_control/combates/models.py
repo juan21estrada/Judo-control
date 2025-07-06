@@ -14,6 +14,7 @@ class Combate(models.Model):
     iniciado = models.BooleanField('Iniciado', default=False)
     ganador = models.ForeignKey(Competidor, on_delete=models.SET_NULL, null=True, blank=True, related_name='combates_ganados')
     registrado_por = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='combates_registrados')
+    observaciones = models.TextField('Observaciones del combate', blank=True, null=True, help_text='Observaciones específicas del combate')
     
     def clean(self):
         # Verificar que los competidores estén inscritos en la competición
@@ -102,7 +103,7 @@ class Combate(models.Model):
             return puntuacion
         
         # Verificar hansoku-make directo
-        hansoku_directo = self.amonestaciones.filter(competidor_id=competidor_id, tipo='hansoku_make').exists()
+        hansoku_directo = self.amonestaciones.filter(competidor_id=competidor_id, tipo='hansokumake').exists()
         if hansoku_directo:
             puntuacion['hansoku_make'] = True
             puntuacion['ganador'] = False

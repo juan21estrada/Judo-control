@@ -64,6 +64,10 @@ class EstadisticaCompetidor(models.Model):
     shido = models.PositiveIntegerField('Shido', default=0)
     hansokumake = models.PositiveIntegerField('Hansokumake', default=0)
     
+    # Observaciones y recomendaciones
+    observaciones = models.TextField('Observaciones', blank=True, null=True, help_text='Observaciones específicas del competidor')
+    recomendaciones = models.TextField('Recomendaciones', blank=True, null=True, help_text='Recomendaciones de entrenamiento')
+    
     def __str__(self):
         return f"Estadísticas de {self.competidor.nombre} - {self.reporte.titulo}"
     

@@ -6,11 +6,26 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from competidores.models import Competidor
-from competidores.serializers import CompetidorSerializer  # Agregar esta línea
+from competidores.serializers import CompetidorSerializer
 
 class CompeticionViewSet(viewsets.ModelViewSet):
     queryset = Competicion.objects.all()
     serializer_class = CompeticionSerializer
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Actualizar estados de competiciones basándose en fecha_fin
+        for competicion in queryset:
+            competicion.update_status_by_date()
+        
+        # Filtrar por estado finalizado si se proporciona el parámetro
+        finalizada = self.request.query_params.get('finalizada')
+        if finalizada is not None:
+            is_finalizada = finalizada.lower() in ['true', '1', 'yes']
+            queryset = queryset.filter(finalizada=is_finalizada)
+        
+        return queryset
     
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:

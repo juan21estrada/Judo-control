@@ -8,7 +8,11 @@ import {
   Alert,
   CircularProgress,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
+  Card,
+  CardContent,
+  Avatar,
+  Chip
 } from '@mui/material';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -55,7 +59,7 @@ const CompetidorInscripcionForm = () => {
 
     try {
       setLoading(true);
-      await api.post(`competiciones/${id}/inscribir_competidores/`, {
+      await api.post(`/competiciones/${id}/inscribir_competidores/`, {
         competidores: selectedCompetidores
       });
       toast.success('Competidores inscritos exitosamente');
@@ -101,16 +105,74 @@ const CompetidorInscripcionForm = () => {
       <form onSubmit={handleSubmit}>
         <Grid container spacing={3}>
           {competidores.map((competidor) => (
-            <Grid item xs={12} key={competidor.id}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={selectedCompetidores.includes(competidor.id)}
-                    onChange={() => handleCompetidorToggle(competidor.id)}
-                  />
-                }
-                label={`${competidor.nombre} - ${competidor.division_peso} Kg`}
-              />
+            <Grid item xs={12} sm={6} md={4} key={competidor.id}>
+              <Card 
+                className="competitor-card"
+                onClick={() => handleCompetidorToggle(competidor.id)}
+                sx={{ cursor: 'pointer' }}
+              >
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Avatar 
+                      sx={{ 
+                        bgcolor: selectedCompetidores.includes(competidor.id) ? '#1a237e' : '#757575',
+                        mr: 2,
+                        width: 56,
+                        height: 56
+                      }}
+                    >
+                      {competidor.nombre.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6" component="h3">
+                        {competidor.nombre}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        ID: {competidor.identificacion_personal || 'No especificado'}
+                      </Typography>
+                    </Box>
+                    <Checkbox
+                      checked={selectedCompetidores.includes(competidor.id)}
+                      onChange={() => handleCompetidorToggle(competidor.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                    <Chip 
+                      label={`${competidor.division_peso} Kg`}
+                      color="primary"
+                      size="small"
+                    />
+                    <Chip 
+                      label={competidor.genero === 'M' ? 'Masculino' : 'Femenino'}
+                      color="secondary"
+                      size="small"
+                    />
+                    {competidor.cinturon && (
+                      <Chip 
+                        label={competidor.cinturon}
+                        color="default"
+                        size="small"
+                      />
+                    )}
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Edad:</strong> {competidor.edad || 'No especificada'} años
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Categoría:</strong> {competidor.categoria || 'No especificada'}
+                    </Typography>
+                    {competidor.equipo && (
+                      <Typography variant="body2">
+                        <strong>Equipo:</strong> {competidor.equipo}
+                      </Typography>
+                    )}
+                  </Box>
+                </CardContent>
+              </Card>
             </Grid>
           ))}
 

@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from usuarios.models import Usuario
 from competidores.models import Competidor
 
@@ -15,7 +16,8 @@ class Competicion(models.Model):
     )
     
     nombre = models.CharField('Nombre', max_length=100)
-    fecha = models.DateField('Fecha')
+    fecha = models.DateField('Fecha de inicio')
+    fecha_fin = models.DateField('Fecha de fin', null=True, blank=True)
     evento = models.CharField('Evento', max_length=20, choices=EVENTO_CHOICES)
     tipo = models.CharField('Tipo de competencia', max_length=20, choices=TIPO_CHOICES)
     cantidad_atletas = models.PositiveIntegerField('Cantidad de atletas')
@@ -45,6 +47,20 @@ class Competicion(models.Model):
                 raise ValidationError({
                     'competidores': 'La cantidad de competidores inscritos no puede exceder la cantidad máxima de atletas'
                 })
+    
+    def is_finished_by_date(self):
+        """Verifica si la competición debería estar finalizada por fecha"""
+        if self.fecha_fin:
+            return timezone.now().date() > self.fecha_fin
+        return False
+    
+    def update_status_by_date(self):
+        """Actualiza el estado de finalización basándose en la fecha"""
+        if self.is_finished_by_date() and not self.finalizada:
+            self.finalizada = True
+            self.save(update_fields=['finalizada'])
+            return True
+        return False
     
     def __str__(self):
         return f"{self.nombre} - {self.fecha}"

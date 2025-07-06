@@ -177,7 +177,7 @@ class CombateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Combate
         fields = ['id', 'competicion', 'competidor1', 'competidor2', 'duracion', 
-                  'fecha_hora', 'finalizado', 'iniciado', 'ganador', 'registrado_por',
+                  'fecha_hora', 'finalizado', 'iniciado', 'ganador', 'registrado_por', 'observaciones',
                   'competidor1_nombre', 'competidor2_nombre', 'competicion_nombre', 'ganador_nombre',
                   'competidor1_detalle', 'competidor2_detalle', 'ganador_detalle',
                   'acciones_tashi_waza', 'acciones_ne_waza', 'amonestaciones', 'acciones_combinadas']

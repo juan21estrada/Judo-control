@@ -200,6 +200,189 @@ code {
   margin: 20px 0;
 }
 
+/* Estilos para filtros de competición - Fondo azul y letras blancas */
+.competition-filter {
+  background-color: #1976d2 !important;
+  color: white !important;
+  border-radius: 8px !important;
+}
+
+.competition-filter .MuiInputLabel-root {
+  color: white !important;
+}
+
+.competition-filter .MuiOutlinedInput-root {
+  color: white !important;
+}
+
+.competition-filter .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.competition-filter .MuiSelect-icon {
+  color: white !important;
+}
+
+/* Selectores de reportes - Fondo azul y letras blancas */
+.report-selector {
+  background-color: #1976d2 !important;
+  color: white !important;
+  border-radius: 8px !important;
+}
+
+.report-selector .MuiInputLabel-root {
+  color: white !important;
+}
+
+.report-selector .MuiOutlinedInput-root {
+  color: white !important;
+}
+
+.report-selector .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.report-selector .MuiSelect-icon {
+  color: white !important;
+}
+
+.report-selector .MuiChip-root {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+}
+
+/* Botones de estado de combates - Fondo azul y letras blancas */
+.combat-status-buttons .MuiToggleButton-root {
+  background-color: #1976d2 !important;
+  color: white !important;
+  border: 1px solid #0d47a1 !important;
+}
+
+.combat-status-buttons .MuiToggleButton-root:hover {
+  background-color: #0d47a1 !important;
+}
+
+.combat-status-buttons .MuiToggleButton-root.Mui-selected {
+  background-color: #0d47a1 !important;
+  color: white !important;
+}
+
+/* Botones de acciones tácticas y amonestaciones - Fondo azul y letras blancas */
+.tactical-action-button {
+  background-color: #1976d2 !important;
+  color: white !important;
+  border: 1px solid #1976d2 !important;
+}
+
+.tactical-action-button:hover {
+  background-color: #0d47a1 !important;
+  border-color: #0d47a1 !important;
+}
+
+/* Botón exportar PDF con fondo azul y letras blancas */
+.export-pdf-button {
+  background-color: #1976d2 !important;
+  color: white !important;
+  border: 1px solid #1976d2 !important;
+}
+
+.export-pdf-button:hover {
+  background-color: #0d47a1 !important;
+  border-color: #0d47a1 !important;
+}
+
+/* Cartas de competidores mejoradas */
+.competitor-card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(25, 118, 210, 0.3) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.3s ease !important;
+  margin-bottom: 16px !important;
+  padding: 16px !important;
+}
+
+.competitor-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+  border-color: rgba(25, 118, 210, 0.5) !important;
+}
+
+.competitor-card .MuiAvatar-root {
+  background: linear-gradient(45deg, #1976d2, #42a5f5) !important;
+  color: white !important;
+  font-weight: bold !important;
+  width: 48px !important;
+  height: 48px !important;
+  font-size: 1.2rem !important;
+}
+
+.competitor-card .MuiChip-root {
+  font-weight: 500 !important;
+  border-radius: 16px !important;
+}
+
+.competitor-card .MuiTypography-root {
+  color: #1976d2 !important;
+}
+
+.competitor-card .MuiCheckbox-root {
+  color: #1976d2 !important;
+}
+
+.competitor-card .MuiCheckbox-root.Mui-checked {
+  color: #1976d2 !important;
+}
+
+.competitor-card .competitor-info {
+  background: rgba(25, 118, 210, 0.9) !important;
+  color: white !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  margin: 4px 0 !important;
+}
+
+.competitor-card .competitor-details {
+  background: rgba(255, 255, 255, 0.9) !important;
+  padding: 8px !important;
+  border-radius: 6px !important;
+  border-left: 4px solid #1976d2 !important;
+}
+
+/* Gráficos con fondo blanco y letras negras */
+.chart-container {
+  background-color: white !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.chart-container .recharts-cartesian-grid-horizontal line,
+.chart-container .recharts-cartesian-grid-vertical line {
+  stroke: #e0e0e0 !important;
+}
+
+.chart-container .recharts-text {
+  fill: #333333 !important;
+}
+
+.chart-container .recharts-legend-item-text {
+  color: #333333 !important;
+}
+
+.chart-container .recharts-tooltip-wrapper {
+  background-color: white !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.chart-container .recharts-default-tooltip {
+  background-color: white !important;
+  border: none !important;
+  color: #333333 !important;
+}
+
 /* Botón moderno */
 .modern-button {
   background: linear-gradient(45deg, #1976d2, #42a5f5) !important;

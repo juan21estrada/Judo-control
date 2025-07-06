@@ -182,6 +182,29 @@ const useCombateTimer = (id, combate, finalizarCombateAutomatico) => {
   const [tiempo, setTiempo] = useLocalStorage(`combate_${id}_tiempo`, TIEMPO_TOTAL_COMBATE);
   const [cronometroActivo, setCronometroActivo] = useLocalStorage(`combate_${id}_activo`, false);
   
+  // Sincronizar tiempo solo cuando el combate se inicia por primera vez
+  useEffect(() => {
+    if (combate?.iniciado && !combate?.finalizado) {
+      // Solo sincronizar si el combate tiene duración del backend y el localStorage no tiene tiempo guardado
+      const tiempoGuardado = window.localStorage.getItem(`combate_${id}_tiempo`);
+      
+      if (combate.duracion && !tiempoGuardado) {
+        // Convertir duración del backend (formato HH:MM:SS) a segundos
+        const duracionParts = combate.duracion.split(':');
+        const tiempoTranscurrido = parseInt(duracionParts[0]) * 3600 + 
+                                  parseInt(duracionParts[1]) * 60 + 
+                                  parseInt(duracionParts[2]);
+        const tiempoRestante = Math.max(0, TIEMPO_TOTAL_COMBATE - tiempoTranscurrido);
+        setTiempo(tiempoRestante);
+      }
+    }
+    
+    // Si el combate está finalizado, pausar el cronómetro
+    if (combate?.finalizado && cronometroActivo) {
+      setCronometroActivo(false);
+    }
+  }, [combate?.duracion, combate?.iniciado, combate?.finalizado, id, setTiempo, cronometroActivo, setCronometroActivo]);
+  
   const iniciarCronometro = useCallback(() => setCronometroActivo(true), [setCronometroActivo]);
   const pausarCronometro = useCallback(() => setCronometroActivo(false), [setCronometroActivo]);
   
@@ -286,30 +309,39 @@ const determinarGanadorAutomatico = (combate) => {
   const calcularPuntuacionCompetidor = (competidorId) => {
     let puntuacion = { ippon: 0, waza_ari: 0, yuko: 0, shidos: 0 };
     
+    console.log('🔍 Calculando puntuación para competidor ID:', competidorId);
+    console.log('🔍 Acciones tashi waza disponibles:', combate.acciones_tashi_waza);
+    
     // Contar acciones Tashi Waza
     (combate.acciones_tashi_waza || []).forEach(accion => {
+      console.log('🔍 Procesando acción tashi waza:', accion);
+      console.log('🔍 Comparando:', accion.competidor, '===', competidorId, '&&', accion.efectiva);
       if (accion.competidor === competidorId && accion.efectiva) {
-        if (accion.resultado === 'ippon') puntuacion.ippon++;
-        else if (accion.resultado === 'waza_ari') puntuacion.waza_ari++;
-        else if (accion.resultado === 'yuko') puntuacion.yuko++;
+        const puntuacionAccion = accion.puntuacion || accion.resultado;
+        console.log('🔍 Puntuación de la acción:', puntuacionAccion);
+        if (puntuacionAccion === 'ippon') puntuacion.ippon++;
+        else if (puntuacionAccion === 'waza_ari') puntuacion.waza_ari++;
+        else if (puntuacionAccion === 'yuko') puntuacion.yuko++;
       }
     });
     
     // Contar acciones Ne Waza
     (combate.acciones_ne_waza || []).forEach(accion => {
+      console.log('🔍 Procesando acción ne waza:', accion);
       if (accion.competidor === competidorId && accion.efectiva) {
-        if (accion.resultado === 'ippon') puntuacion.ippon++;
-        else if (accion.resultado === 'waza_ari') puntuacion.waza_ari++;
-        else if (accion.resultado === 'yuko') puntuacion.yuko++;
+        const puntuacionAccion = accion.puntuacion || accion.resultado;
+        if (puntuacionAccion === 'ippon') puntuacion.ippon++;
+        else if (puntuacionAccion === 'waza_ari') puntuacion.waza_ari++;
+        else if (puntuacionAccion === 'yuko') puntuacion.yuko++;
       }
     });
     
     // Contar acciones combinadas
     (combate.acciones_combinadas || []).forEach(accion => {
       if (accion.competidor === competidorId) {
-        if (accion.resultado_final === 'ippon') puntuacion.ippon++;
-        else if (accion.resultado_final === 'waza_ari') puntuacion.waza_ari++;
-        else if (accion.resultado_final === 'yuko') puntuacion.yuko++;
+        if (accion.puntuacion === 'ippon') puntuacion.ippon++;
+        else if (accion.puntuacion === 'waza_ari') puntuacion.waza_ari++;
+        else if (accion.puntuacion === 'yuko') puntuacion.yuko++;
       }
     });
     
@@ -324,36 +356,102 @@ const determinarGanadorAutomatico = (combate) => {
     return puntuacion;
   };
 
-  const puntuacion1 = calcularPuntuacionCompetidor(combate.competidor1.id);
-  const puntuacion2 = calcularPuntuacionCompetidor(combate.competidor2.id);
+  const puntuacion1 = calcularPuntuacionCompetidor(combate.competidor1);
+  const puntuacion2 = calcularPuntuacionCompetidor(combate.competidor2);
+  
+  console.log('🏆 Puntuaciones calculadas:');
+  console.log('🔍 Competidor 1 (ID:', combate.competidor1, '):', puntuacion1);
+  console.log('🔍 Competidor 2 (ID:', combate.competidor2, '):', puntuacion2);
   
   // Verificar descalificación por Hansoku-make
-  if (puntuacion1.shidos >= 4) return combate.competidor2.id;
-  if (puntuacion2.shidos >= 4) return combate.competidor1.id;
-  
-  // Verificar Ippon
-  if (puntuacion1.ippon > 0 && puntuacion2.ippon === 0) return combate.competidor1.id;
-  if (puntuacion2.ippon > 0 && puntuacion1.ippon === 0) return combate.competidor2.id;
-  
-  // Si ambos tienen Ippon, gana quien tenga más
-  if (puntuacion1.ippon > 0 && puntuacion2.ippon > 0) {
-    if (puntuacion1.ippon > puntuacion2.ippon) return combate.competidor1.id;
-    if (puntuacion2.ippon > puntuacion1.ippon) return combate.competidor2.id;
+  if (puntuacion1.shidos >= 4) {
+    console.log('🏆 Ganador por descalificación: Competidor 2 (Competidor 1 descalificado)');
+    return combate.competidor2;
+  }
+  if (puntuacion2.shidos >= 4) {
+    console.log('🏆 Ganador por descalificación: Competidor 1 (Competidor 2 descalificado)');
+    return combate.competidor1;
   }
   
-  // Verificar Waza-ari
-  if (puntuacion1.waza_ari > puntuacion2.waza_ari) return combate.competidor1.id;
-  if (puntuacion2.waza_ari > puntuacion1.waza_ari) return combate.competidor2.id;
+  // Calcular puntos positivos totales (Ippon=10, Waza-ari=5, Yuko=3)
+  const puntosPositivos1 = (puntuacion1.ippon * 10) + (puntuacion1.waza_ari * 5) + (puntuacion1.yuko * 3);
+  const puntosPositivos2 = (puntuacion2.ippon * 10) + (puntuacion2.waza_ari * 5) + (puntuacion2.yuko * 3);
   
-  // Verificar Yuko
-  if (puntuacion1.yuko > puntuacion2.yuko) return combate.competidor1.id;
-  if (puntuacion2.yuko > puntuacion1.yuko) return combate.competidor2.id;
+  console.log('🏆 Puntos positivos calculados:');
+  console.log('🔍 Competidor 1:', puntosPositivos1, 'puntos');
+  console.log('🔍 Competidor 2:', puntosPositivos2, 'puntos');
   
-  // Verificar por menor cantidad de Shidos
-  if (puntuacion1.shidos < puntuacion2.shidos) return combate.competidor1.id;
-  if (puntuacion2.shidos < puntuacion1.shidos) return combate.competidor2.id;
+  // Verificar ganador por más puntos positivos
+  if (puntosPositivos1 > puntosPositivos2) {
+    console.log('🏆 Ganador por más puntos positivos: Competidor 1');
+    return combate.competidor1;
+  }
+  if (puntosPositivos2 > puntosPositivos1) {
+    console.log('🏆 Ganador por más puntos positivos: Competidor 2');
+    return combate.competidor2;
+  }
   
-  // En caso de empate, retornar null (empate)
+  // En caso de empate en puntos positivos, gana el primero en realizar una acción
+  console.log('🏆 Empate en puntos positivos, verificando primera acción...');
+  
+  // Obtener todas las acciones con timestamp y ordenarlas cronológicamente
+  const todasLasAcciones = [];
+  
+  // Agregar acciones Tashi Waza
+  (combate.acciones_tashi_waza || []).forEach(accion => {
+    if (accion.efectiva) {
+      todasLasAcciones.push({
+        competidor: accion.competidor,
+        timestamp: new Date(accion.timestamp || accion.created_at),
+        tipo: 'tashi_waza'
+      });
+    }
+  });
+  
+  // Agregar acciones Ne Waza
+  (combate.acciones_ne_waza || []).forEach(accion => {
+    if (accion.efectiva) {
+      todasLasAcciones.push({
+        competidor: accion.competidor,
+        timestamp: new Date(accion.timestamp || accion.created_at),
+        tipo: 'ne_waza'
+      });
+    }
+  });
+  
+  // Agregar acciones combinadas
+  (combate.acciones_combinadas || []).forEach(accion => {
+    todasLasAcciones.push({
+      competidor: accion.competidor,
+      timestamp: new Date(accion.timestamp || accion.created_at),
+      tipo: 'combinada'
+    });
+  });
+  
+  // Ordenar por timestamp (más antiguo primero)
+  todasLasAcciones.sort((a, b) => a.timestamp - b.timestamp);
+  
+  console.log('🔍 Acciones ordenadas cronológicamente:', todasLasAcciones);
+  
+  // Buscar la primera acción
+  if (todasLasAcciones.length > 0) {
+    const primeraAccion = todasLasAcciones[0];
+    console.log('🏆 Ganador por primera acción: Competidor', primeraAccion.competidor === combate.competidor1 ? '1' : '2');
+    return primeraAccion.competidor;
+  }
+  
+  // Si no hay acciones, verificar por menor cantidad de Shidos
+  if (puntuacion1.shidos < puntuacion2.shidos) {
+    console.log('🏆 Ganador por menos Shidos: Competidor 1');
+    return combate.competidor1;
+  }
+  if (puntuacion2.shidos < puntuacion1.shidos) {
+    console.log('🏆 Ganador por menos Shidos: Competidor 2');
+    return combate.competidor2;
+  }
+  
+  // En caso de empate total, retornar null
+  console.log('🏆 Resultado: EMPATE TOTAL - no hay ganador automático');
   return null;
 };
 
@@ -368,6 +466,7 @@ function CombateControl() {
   const [accionesCombate, setAccionesCombate] = useState([]);
   const [mensajeExito, setMensajeExito] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [dialogGanador, setDialogGanador] = useState({ open: false, mensaje: '', ganador: '' });
   const [puntuaciones, setPuntuaciones] = useState(null);
   
   // Función para finalizar combate automáticamente
@@ -375,18 +474,53 @@ function CombateControl() {
     try {
       console.log('🏁 Finalizando combate automáticamente por:', motivo);
       
-      const ganadorAutomatico = determinarGanadorAutomatico(combate);
+      // Llamar al backend para verificar finalización automática
+      const response = await combatesService.verificarFinalizacionAutomatica(id);
       
-      if (ganadorAutomatico) {
-        await combatesService.finalizarCombate(id, { ganador: ganadorAutomatico });
-        const nombreGanador = combate.competidor1.id === ganadorAutomatico 
-          ? combate.competidor1.nombre 
-          : combate.competidor2.nombre;
-        mostrarMensajeExito(`¡Combate finalizado! Ganador: ${nombreGanador}`);
+      if (response && response.ganador) {
+        // El backend ya determinó un ganador automáticamente
+        console.log('🔍 Datos del combate:', { 
+          competidor1: combate.competidor1, 
+          competidor2: combate.competidor2, 
+          ganadorId: response.ganador 
+        });
+        const nombreGanador = combate.competidor1 === response.ganador 
+          ? combate.competidor1_nombre 
+          : combate.competidor2_nombre;
+        console.log('🔍 Nombre del ganador calculado:', nombreGanador);
+        mostrarDialogGanador(nombreGanador, response.motivo);
       } else {
-        // En caso de empate, mostrar diálogo para selección manual
-        mostrarMensajeExito('Tiempo agotado. El combate está empatado. Seleccione un ganador.');
-        toggleDialog('finalizar', true);
+        // Si no hay ganador automático, usar la lógica del frontend como respaldo
+        const ganadorAutomatico = determinarGanadorAutomatico(combate);
+        
+        if (ganadorAutomatico) {
+          // Calcular duración transcurrida en formato HH:MM:SS
+          const TIEMPO_TOTAL_COMBATE = 240; // 4 minutos en segundos
+          const tiempoTranscurrido = TIEMPO_TOTAL_COMBATE - tiempo;
+          const horas = Math.floor(tiempoTranscurrido / 3600);
+          const minutos = Math.floor((tiempoTranscurrido % 3600) / 60);
+          const segundos = tiempoTranscurrido % 60;
+          const duracionFormateada = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+          
+          await combatesService.finalizarCombate(id, { 
+            ganador: ganadorAutomatico,
+            duracion: duracionFormateada
+          });
+          console.log('🔍 Ganador automático frontend:', ganadorAutomatico);
+          console.log('🔍 Datos del combate (frontend):', { 
+            competidor1: combate.competidor1, 
+            competidor2: combate.competidor2 
+          });
+          const nombreGanador = combate.competidor1 === ganadorAutomatico 
+            ? combate.competidor1_nombre 
+            : combate.competidor2_nombre;
+          console.log('🔍 Nombre del ganador calculado (frontend):', nombreGanador);
+          mostrarDialogGanador(nombreGanador);
+        } else {
+          // En caso de empate real, mostrar diálogo para selección manual
+          mostrarMensajeExito('Tiempo agotado. El combate está empatado. Seleccione un ganador.');
+          toggleDialog('finalizar', true);
+        }
       }
       
       await fetchCombate();
@@ -425,12 +559,21 @@ function CombateControl() {
     duracion: '' // solo para ne-waza
   });
   
-  const [ganadorSeleccionado, setGanadorSeleccionado] = useState('');
+  // Variable ganadorSeleccionado eliminada - solo finalización automática
 
   // ==================== FUNCIONES AUXILIARES ====================
   const mostrarMensajeExito = useCallback((mensaje) => {
     setMensajeExito(mensaje);
     setSnackbarOpen(true);
+  }, []);
+
+  const mostrarDialogGanador = useCallback((ganador, motivo = '') => {
+    console.log('🏆 mostrarDialogGanador llamado con:', { ganador, motivo });
+    const mensaje = motivo 
+      ? `¡El combate ha finalizado!\nGanador: ${ganador}\n(${motivo})`
+      : `¡El combate ha finalizado!\nGanador: ${ganador}`;
+    console.log('🏆 Estableciendo dialogGanador con:', { open: true, mensaje, ganador });
+    setDialogGanador({ open: true, mensaje, ganador });
   }, []);
   
   const toggleDialog = useCallback((dialogName, value = null) => {
@@ -462,7 +605,7 @@ function CombateControl() {
       efectiva: true,
       duracion: ''
     });
-    setGanadorSeleccionado('');
+    // setGanadorSeleccionado eliminado - solo finalización automática
   }, []);
 
   const obtenerTecnicas = useCallback((tipo, categoria) => {
@@ -482,6 +625,9 @@ function CombateControl() {
       }
       
       setCombate(response);
+      console.log('🔍 Datos del combate cargados:', response);
+      console.log('🔍 Competidor 1:', response.competidor1);
+      console.log('🔍 Competidor 2:', response.competidor2);
       
       // Combinar y ordenar todas las acciones con nombres descriptivos
       const todasLasAcciones = [
@@ -664,7 +810,7 @@ function CombateControl() {
             tiempo: formatTiempo(tiempo),
             acciones_tashi: accionesTashi,
             acciones_ne: accionesNe,
-            resultado_final: determinarResultadoAutomatico(accionesTashi, accionesNe)
+            puntuacion: determinarResultadoAutomatico(accionesTashi, accionesNe)
           });
           
           data = {
@@ -732,44 +878,7 @@ function CombateControl() {
     }
   }, [forms, tiempo, id, combate, cronometroActivo, pausarCronometro, mostrarMensajeExito, limpiarFormularios, toggleDialog, fetchCombate]);
 
-  const finalizarCombate = useCallback(async () => {
-    try {
-      // Determinar ganador automáticamente basado en los resultados
-      const ganadorAutomatico = determinarGanadorAutomatico(combate);
-      
-      if (ganadorAutomatico === null) {
-        // En caso de empate, mostrar diálogo para selección manual
-        if (!ganadorSeleccionado) {
-          setError('El combate está empatado. Debe seleccionar un ganador manualmente.');
-          return;
-        }
-      }
-      
-      const ganadorFinal = ganadorAutomatico || ganadorSeleccionado;
-      
-      if (!ganadorFinal) {
-        setError('No se puede determinar el ganador del combate');
-        return;
-      }
-
-      await combatesService.finalizarCombate(id, { ganador: ganadorFinal });
-      pausarCronometro();
-      await fetchCombate();
-      
-      const nombreGanador = combate.competidor1.id === ganadorFinal 
-        ? combate.competidor1.nombre 
-        : combate.competidor2.nombre;
-      
-      mostrarMensajeExito(`Combate finalizado. Ganador: ${nombreGanador}`);
-      toggleDialog('finalizar', false);
-    } catch (error) {
-      console.error('Error al finalizar combate:', error);
-      const errorMessage = error.response?.data?.error || 
-                          error.response?.data?.message || 
-                          'Error al finalizar el combate';
-      setError(errorMessage);
-    }
-  }, [combate, ganadorSeleccionado, id, pausarCronometro, fetchCombate, mostrarMensajeExito, toggleDialog]);
+  // Función finalizarCombate manual eliminada - solo finalización automática
 
   // ==================== FUNCIONES PARA ACCIONES COMBINADAS ====================
   const agregarAccionCombinada = useCallback(() => {
@@ -823,12 +932,12 @@ function CombateControl() {
       const puntuacionesActualizadas = {
         competidor1: {
           id: data.puntuaciones.competidor1.id,
-          nombre: data.puntuaciones.competidor1.nombre || combate?.competidor1?.nombre || 'Competidor 1',
+          nombre: data.puntuaciones.competidor1.nombre || combate?.competidor1_nombre || 'Competidor 1',
           puntuacion: data.puntuaciones.competidor1.puntuacion
         },
         competidor2: {
           id: data.puntuaciones.competidor2.id,
-          nombre: data.puntuaciones.competidor2.nombre || combate?.competidor2?.nombre || 'Competidor 2',
+          nombre: data.puntuaciones.competidor2.nombre || combate?.competidor2_nombre || 'Competidor 2',
           puntuacion: data.puntuaciones.competidor2.puntuacion
         }
       };
@@ -841,8 +950,8 @@ function CombateControl() {
       
       if (data.ganador && combate) {
         nombreGanador = combate.competidor1?.id === data.ganador 
-          ? combate.competidor1.nombre 
-          : combate.competidor2.nombre;
+          ? combate.competidor1_nombre
+        : combate.competidor2_nombre;
       }
       
       // Usar mostrarMensajeExito en lugar de alert
@@ -908,13 +1017,13 @@ function CombateControl() {
       // Contar acciones combinadas
       (combate.acciones_combinadas || []).forEach(accion => {
         if (accion.competidor === competidorId) {
-          if (accion.resultado_final === 'ippon') {
+          if (accion.puntuacion === 'ippon') {
             puntuacion.ippon++;
             puntosTotal += VALORES_PUNTOS.ippon;
-          } else if (accion.resultado_final === 'waza_ari') {
+          } else if (accion.puntuacion === 'waza_ari') {
             puntuacion.waza_ari++;
             puntosTotal += VALORES_PUNTOS.waza_ari;
-          } else if (accion.resultado_final === 'yuko') {
+          } else if (accion.puntuacion === 'yuko') {
             puntuacion.yuko++;
             puntosTotal += VALORES_PUNTOS.yuko;
           }
@@ -945,12 +1054,12 @@ function CombateControl() {
     const puntuacionesCalculadas = {
       competidor1: {
         id: combate.competidor1.id || combate.competidor1_id || combate.competidor1,
-        nombre: combate.competidor1.nombre || combate.competidor1_nombre || 'Competidor 1',
+        nombre: combate.competidor1_nombre || 'Competidor 1',
         puntuacion: calcularPuntuacionCompetidor(combate.competidor1.id || combate.competidor1_id || combate.competidor1)
       },
       competidor2: {
         id: combate.competidor2.id || combate.competidor2_id || combate.competidor2,
-        nombre: combate.competidor2.nombre || combate.competidor2_nombre || 'Competidor 2',
+        nombre: combate.competidor2_nombre || 'Competidor 2',
         puntuacion: calcularPuntuacionCompetidor(combate.competidor2.id || combate.competidor2_id || combate.competidor2)
       }
     };
@@ -1199,14 +1308,7 @@ function CombateControl() {
                 {cronometroActivo ? 'Pausar' : 'Iniciar'}
               </Button>
               
-              <Button
-                variant="outlined"
-                color="error"
-                onClick={() => toggleDialog('finalizar', true)}
-                startIcon={<StopIcon />}
-              >
-                Finalizar Combate
-              </Button>
+              {/* Botón de finalizar combate eliminado - solo finalización automática */}
             </Box>
           </Box>
         </CardContent>
@@ -1225,6 +1327,7 @@ function CombateControl() {
             variant="outlined" 
             onClick={() => toggleDialog('tashi', true)}
             size="large"
+            className="tactical-action-button"
           >
             Registrar Tashi Waza
           </Button>
@@ -1235,6 +1338,7 @@ function CombateControl() {
             variant="outlined" 
             onClick={() => toggleDialog('ne', true)}
             size="large"
+            className="tactical-action-button"
           >
             Registrar Ne Waza
           </Button>
@@ -1245,6 +1349,7 @@ function CombateControl() {
             variant="outlined" 
             onClick={() => toggleDialog('amonestacion', true)}
             size="large"
+            className="tactical-action-button"
           >
             Registrar Amonestación
           </Button>
@@ -1256,6 +1361,7 @@ function CombateControl() {
             color="secondary"
             onClick={() => toggleDialog('combinada', true)}
             size="large"
+            className="tactical-action-button"
           >
             Acción Combinada
           </Button>
@@ -1764,61 +1870,7 @@ function CombateControl() {
     </Dialog>
   );
 
-  const renderDialogFinalizar = () => {
-    return (
-      <Dialog open={dialogs.finalizar} onClose={() => toggleDialog('finalizar', false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Finalizar Combate</DialogTitle>
-        <DialogContent>
-          {(() => {
-            const ganadorAutomatico = determinarGanadorAutomatico(combate);
-            if (ganadorAutomatico) {
-              const nombreGanador = combate?.competidor1?.id === ganadorAutomatico 
-                ? combate.competidor1.nombre 
-                : combate.competidor2.nombre;
-              return (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  <strong>Ganador determinado automáticamente:</strong> {nombreGanador}
-                </Alert>
-              );
-            } else {
-              return (
-                <>
-                  <Alert severity="warning" sx={{ mb: 2 }}>
-                    El combate está empatado. Seleccione el ganador manualmente.
-                  </Alert>
-                  <FormControl fullWidth>
-                    <InputLabel>Seleccionar Ganador</InputLabel>
-                    <Select
-                      value={ganadorSeleccionado}
-                      onChange={(e) => setGanadorSeleccionado(e.target.value)}
-                      label="Seleccionar Ganador"
-                    >
-                      {combate && (
-                        <>
-                          <MenuItem value={combate.competidor1.id}>
-                            {combate.competidor1.nombre}
-                          </MenuItem>
-                          <MenuItem value={combate.competidor2.id}>
-                            {combate.competidor2.nombre}
-                          </MenuItem>
-                        </>
-                      )}
-                    </Select>
-                  </FormControl>
-                </>
-              );
-            }
-          })()}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => toggleDialog('finalizar', false)}>Cancelar</Button>
-          <Button onClick={finalizarCombate} variant="contained" color="primary">
-            Finalizar Combate
-          </Button>
-        </DialogActions>
-      </Dialog>
-    );
-  };
+  // Diálogo de finalizar combate eliminado - solo finalización automática
 
   // ==================== RENDER PRINCIPAL ====================
   if (loading) {
@@ -1849,8 +1901,54 @@ function CombateControl() {
       {renderDialogNe()}
       {renderDialogAmonestacion()}
       {renderDialogCombinada()}
-      {renderDialogFinalizar()}
+      {/* Diálogo de finalizar eliminado */}
       
+      {/* Dialog para mostrar ganador */}
+      <Dialog
+        open={dialogGanador.open}
+        onClose={() => setDialogGanador({ open: false, mensaje: '', ganador: '' })}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            textAlign: 'center',
+            padding: 3,
+            backgroundColor: '#1976d2',
+            color: 'white'
+          }
+        }}
+      >
+        <DialogContent>
+          <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 'bold', color: 'white' }}>
+            🥋 ¡COMBATE FINALIZADO! 🥋
+          </Typography>
+          <Typography variant="h5" sx={{ mt: 2, mb: 2, color: 'white', fontWeight: 'bold' }}>
+            GANADOR: {dialogGanador.ganador || 'No definido'}
+          </Typography>
+          {dialogGanador.mensaje.includes('(') && (
+            <Typography variant="body1" sx={{ color: 'white', opacity: 0.9 }}>
+              {dialogGanador.mensaje.split('(')[1].replace(')', '')}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
+          <Button
+            onClick={() => setDialogGanador({ open: false, mensaje: '', ganador: '' })}
+            variant="contained"
+            sx={{ 
+              backgroundColor: 'white', 
+              color: '#1976d2',
+              fontWeight: 'bold',
+              '&:hover': {
+                backgroundColor: '#f5f5f5'
+              }
+            }}
+          >
+            ACEPTAR
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Snackbar para mensajes de éxito */}
       <Snackbar
         open={snackbarOpen}
