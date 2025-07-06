@@ -1,0 +1,25 @@
+{
+  "files": {
+    "main.css": "/Judo-control/static/css/main.f48626e3.css",
+    "main.js": "/Judo-control/static/js/main.1112acf6.js",
+    "static/js/977.5eaa53fb.chunk.js": "/Judo-control/static/js/977.5eaa53fb.chunk.js",
+    "static/js/455.dc8270b1.chunk.js": "/Judo-control/static/js/455.dc8270b1.chunk.js",
+    "static/media/silva-ijf-scaled.jpg": "/Judo-control/static/media/silva-ijf-scaled.13176dc604ad31653901.jpg",
+    "static/media/IDALIS-01-RLH.x70014.jpg": "/Judo-control/static/media/IDALIS-01-RLH.x70014.a2db09931982ee00a369.jpg",
+    "static/media/Judo-Cuba-andy-granda-tashkent.jpg": "/Judo-control/static/media/Judo-Cuba-andy-granda-tashkent.8b969f1aff7b8c74b75c.jpg",
+    "static/media/arnaes_odelin.jpg": "/Judo-control/static/media/arnaes_odelin.a18e08a535263f717bde.jpg",
+    "static/media/judo-cuba.jpg": "/Judo-control/static/media/judo-cuba.1dd810917111d7cc07bc.jpg",
+    "static/media/340571120___n-e1681096999627.jpg": "/Judo-control/static/media/340571120_6329977050357957_4030065403673599047_n-e1681096999627.3aaed32e3d3ef9dd4be6.jpg",
+    "static/media/R.jfif": "/Judo-control/static/media/R.d4f4ea0f65548709fca0.jfif",
+    "static/media/imgres.webp": "/Judo-control/static/media/imgres.15af7fb0a40aa85ec273.webp",
+    "index.html": "/Judo-control/index.html",
+    "main.f48626e3.css.map": "/Judo-control/static/css/main.f48626e3.css.map",
+    "main.1112acf6.js.map": "/Judo-control/static/js/main.1112acf6.js.map",
+    "977.5eaa53fb.chunk.js.map": "/Judo-control/static/js/977.5eaa53fb.chunk.js.map",
+    "455.dc8270b1.chunk.js.map": "/Judo-control/static/js/455.dc8270b1.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.f48626e3.css",
+    "static/js/main.1112acf6.js"
+  ]
+}
